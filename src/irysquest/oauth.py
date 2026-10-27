@@ -29,6 +29,7 @@ import httpx
 from .console import say
 
 CLIENT_NAME = "IrysQuest"
+_H = {"ngrok-skip-browser-warning": "1"}
 
 
 @dataclass
@@ -92,7 +93,7 @@ class _Callback(BaseHTTPRequestHandler):
 
 def login(mcp_url: str, token_file: Path, open_browser: bool = True) -> Tokens:
     """Runs the full flow once and stores the tokens. Returns them."""
-    with httpx.Client(timeout=20) as c:
+    with httpx.Client(timeout=20, headers=_H) as c:
         asm, resource = _discover(c, mcp_url)
 
         srv = HTTPServer(("127.0.0.1", 0), _Callback)
@@ -170,7 +171,7 @@ def login(mcp_url: str, token_file: Path, open_browser: bool = True) -> Tokens:
 
 def refresh(tokens: Tokens, token_file: Path) -> Tokens:
     """Rotates the refresh token. The server invalidates the old one, so save at once."""
-    with httpx.Client(timeout=20) as c:
+    with httpx.Client(timeout=20, headers=_H) as c:
         r = c.post(
             tokens.token_endpoint,
             data={"grant_type": "refresh_token", "refresh_token": tokens.refresh_token, "client_id": tokens.client_id},

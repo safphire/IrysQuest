@@ -42,6 +42,8 @@ class QuestClient:
             "Authorization": f"Bearer {self.tokens.access_token}",
             "MCP-Protocol-Version": PROTOCOL_VERSION,
             "Accept": "application/json",
+            # ngrok's free tier shows an interstitial to browser-like clients; this header skips it.
+            "ngrok-skip-browser-warning": "1",
         }
 
     def rpc(self, method: str, params: dict | None = None) -> Any:
