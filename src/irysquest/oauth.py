@@ -132,7 +132,10 @@ def login(mcp_url: str, token_file: Path, open_browser: bool = True) -> Tokens:
 
         t = threading.Thread(target=srv.handle_request, daemon=True)
         t.start()
-        t.join(timeout=600)
+        # Poll instead of one long join: on Windows a blocked join can't be interrupted by Ctrl+C.
+        deadline = time.time() + 600
+        while t.is_alive() and time.time() < deadline:
+            t.join(timeout=0.5)
         srv.server_close()
         res = _Callback.result
         if not res:
