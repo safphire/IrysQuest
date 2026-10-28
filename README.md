@@ -24,10 +24,14 @@ decide. It proposes, you approve; it never acts on its own.
 
 | Trigger | What the agent does | Meta model |
 |---|---|---|
-| Every morning (or `irysquest dig`) | Reads your tracked quests, finds the ones whose step hasn't moved in days, drafts a 2–10 minute first step for each, submits it as a proposal with a reason | Muse Spark |
+| Every morning (or `irysquest dig`) | Reads your tracked quests, finds the ones nothing has touched in days, drafts a 2–10 minute first step for each, submits it as a proposal with the reason *and the assumption it made* | Muse Spark |
 | A voice brain dump (capture page) | Transcribes, splits the ramble into separate quests, proposes them | Muse Voice Transcribe + Muse Spark |
 | A photo of a notebook page or whiteboard | Reads it, turns it into proposed quests | Muse Spark (vision) |
 | `--provider open` | The same loop on Meta's open-weight Muse Spark Open, via Baseten or Modal | Muse Spark Open |
+
+**It asks before it guesses.** A quest with no *why* and no history gets a different proposal: a 2-minute step to write what done looks like. Every other proposal states its assumption, so a wrong guess costs you nothing.
+
+**It remembers.** `.irysquest/context.json` holds what you told it about yourself (`irysquest profile`), what it inferred about each quest, and what you accepted or rejected. Rejected steps are never re-proposed; the next attempt takes a different angle.
 
 **Nothing the agent does changes your data.** The NextQuest server only exposes *propose\_\** tools to AI clients;
 every output lands in the app's Proposals screen, where you accept, edit or reject it. This is enforced by the server,
@@ -59,7 +63,16 @@ irysquest login              # one-time: approves this agent on the server's con
 irysquest today              # proves the connection: tracked quests and their steps
 irysquest dig --dry-run      # what the agent would propose, without proposing
 irysquest dig                # propose; accept, edit or reject in the app
+irysquest profile "Solo dev, evenings only; a small step is 5 minutes."
+irysquest capture "finish the pilot script, mom's birthday, learn to sing"
+irysquest serve              # capture page (voice, photo, text), Dig now, and the 08:00 schedule
 ```
+
+Open the capture page from your phone on the same Wi-Fi: `http://<PC IP>:8787/`. With `TRY_IT_TOKEN` set,
+`/?try=<token>` is a visitor mode: friends see what the agent would propose for their own words; nothing is sent.
+
+Open-weight mode: set `MUSE_PROVIDER=open` and `OPEN_BASE_URL`/`OPEN_API_KEY` to any OpenAI-compatible host
+serving `muse-spark-open-1026` (Baseten, Modal, or a local server), or pass `--provider open` per command.
 
 Tests run without a NextQuest server, against a small fake in `tests/`:
 
@@ -71,9 +84,11 @@ pip install -e ".[dev]" && pytest
 
 - [x] Sign in to the server (OAuth 2.1, PKCE) and read quests
 - [x] Stall detection and Muse Spark breakdowns → proposals (`irysquest dig`, `--dry-run` to preview)
-- [ ] Scheduled runs and the agent console
-- [ ] Capture page: voice (Muse Voice Transcribe) and notebook photo (Muse Spark vision)
-- [ ] Open-weight mode (Muse Spark Open)
+- [x] Context: profile, per-quest memory, ask-for-why, stated assumptions, rejection feedback
+- [x] `irysquest serve`: morning schedule, Dig now, agent console
+- [x] Capture page: voice (Muse Voice Transcribe), notebook photo (Muse Spark vision), typed; try-it mode
+- [x] Open-weight mode (`--provider open`) — needs a host for Muse Spark Open
+- [ ] Verified on a real phone end to end (in progress)
 
 ## License
 

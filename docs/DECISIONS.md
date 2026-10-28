@@ -18,3 +18,14 @@
   clamped to 2–10, step length capped). A reply that can't be parsed is skipped, never half-proposed.
 - **D-8 (28 Oct)** One proposal per stalled quest per run, and none while a proposal for that quest is pending.
   Rejected steps are passed to Muse so the next attempt takes a different angle.
+- **D-9 (28 Oct)** The agent keeps its own memory in `.irysquest/context.json`: a user profile, and per quest the
+  inferred intent, last stated assumption, accepted and rejected steps. NextQuest stays the source of truth for
+  quests; this file only holds what the agent learned. Decisions are reconciled from `list_proposals` each run.
+- **D-10 (28 Oct)** Thin context → ask, don't guess. If Muse reports the purpose is unclear and the quest has no
+  why, the proposal is a 2-minute step to write the why. Otherwise the stated assumption is appended to the reason.
+- **D-11 (28 Oct)** Captures (voice, photo, text) always propose into the inbox with `track=false`, so the
+  five-slot cap is never touched by a brain dump. Promotion to tracked is the user's call in the app.
+- **D-12 (28 Oct)** `serve` is `http.server`, not a framework: one file, no dependencies, and Streamlit-style
+  apps are on the organisers' overdone list. Try-it mode is a token in the URL and previews only.
+- **D-13 (28 Oct)** Open-weight mode swaps the chat base URL and model only; transcription stays on the Model
+  API because Muse Spark Open doesn't do ASR.

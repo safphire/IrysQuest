@@ -48,7 +48,10 @@ def _call(name: str, a: dict) -> tuple[dict | str, bool]:
     if name.startswith("propose_"):
         if not a.get("reason"):
             return "reason is required", True
-        p = {"id": f"p{len(PROPOSALS) + 1}", "op": name, "payload": a, "status": "pending"}
+        qid = a.get("quest_id") or a.get("parent_id")
+        title = next((q["title"] for q in QUESTS if q["id"] == qid), a.get("title"))
+        p = {"id": f"p{len(PROPOSALS) + 1}", "op": name, "payload": a, "status": "pending",
+             "quest": title, "after": a.get("text") or a.get("title", ""), "reason": a.get("reason")}
         PROPOSALS.append(p)
         return p, False
     return f"unknown tool {name}", True
