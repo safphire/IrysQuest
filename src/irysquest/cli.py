@@ -57,8 +57,9 @@ def cmd_dig(settings: config.Settings, args: argparse.Namespace) -> int:
     proposals = []
     for st in ("pending", "rejected"):
         proposals += c.list_proposals(st).get("proposals", [])
-    stalls = find_stalls(today, proposals, args.days or settings.stall_days)
-    say(f"{today['slots_used']}/{today['slot_cap']} slots used; {len(stalls)} stalled for {args.days or settings.stall_days}+ days.")
+    days = settings.stall_days if args.days is None else args.days
+    stalls = find_stalls(today, proposals, days)
+    say(f"{today['slots_used']}/{today['slot_cap']} slots used; {len(stalls)} stalled for {days}+ days.")
     if not stalls:
         say("Nothing is buried. See you tomorrow.")
         return 0
