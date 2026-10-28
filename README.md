@@ -57,6 +57,8 @@ pip install -e .
 cp .env.example .env         # set QUEST_SERVER_URL and META_API_KEY
 irysquest login              # one-time: approves this agent on the server's consent page
 irysquest today              # proves the connection: tracked quests and their steps
+irysquest dig --dry-run      # what the agent would propose, without proposing
+irysquest dig                # propose; accept, edit or reject in the app
 ```
 
 Tests run without a NextQuest server, against a small fake in `tests/`:
@@ -68,7 +70,7 @@ pip install -e ".[dev]" && pytest
 ## Status
 
 - [x] Sign in to the server (OAuth 2.1, PKCE) and read quests
-- [ ] Stall detection and Muse Spark breakdowns → proposals
+- [x] Stall detection and Muse Spark breakdowns → proposals (`irysquest dig`, `--dry-run` to preview)
 - [ ] Scheduled runs and the agent console
 - [ ] Capture page: voice (Muse Voice Transcribe) and notebook photo (Muse Spark vision)
 - [ ] Open-weight mode (Muse Spark Open)

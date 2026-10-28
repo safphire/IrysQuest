@@ -12,3 +12,9 @@
   typed in the browser; the agent never handles it.
 - **D-5 (27 Oct)** Tokens live in `.irysquest/tokens.json` (gitignored, mode 600). Refresh tokens rotate; the file is
   rewritten on every refresh.
+- **D-6 (28 Oct)** Stall signal is the server's `touched_at` per quest (updated by every event on it), not
+  step age: it needs no history parsing and matches what the user sees. Threshold `STALL_DAYS`, default 3.
+- **D-7 (28 Oct)** Muse replies are requested as JSON but parsed defensively (first `{...}` in the text, minutes
+  clamped to 2–10, step length capped). A reply that can't be parsed is skipped, never half-proposed.
+- **D-8 (28 Oct)** One proposal per stalled quest per run, and none while a proposal for that quest is pending.
+  Rejected steps are passed to Muse so the next attempt takes a different angle.
