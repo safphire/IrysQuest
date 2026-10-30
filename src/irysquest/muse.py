@@ -110,13 +110,16 @@ class Muse:
         r = self._http.post(
             f"{self.p.transcribe_base_url}/asr/transcribe",
             headers={"Authorization": f"Bearer {key}"},
-            files={"file": (filename, audio)},
-            data={"model": self.p.transcribe_model},
+            # The API takes a JSON "request" part and an "audio" part: mono 16-bit PCM WAV at 16 or 24 kHz only.
+            files={
+                "request": (None, json.dumps({"model": self.p.transcribe_model, "audioEncoding": "WAV"}), "application/json"),
+                "audio": (filename, audio, "audio/wav"),
+            },
         )
         if r.status_code >= 400:
             raise MuseError(f"transcribe {r.status_code}: {r.text[:300]}")
         j = r.json()
-        text = j.get("text") or " ".join(s.get("text", "") for s in j.get("segments", []))
+        text = j.get("transcript") or j.get("text") or ""
         if not text.strip():
             raise MuseError("Transcription came back empty.")
         return text.strip()
