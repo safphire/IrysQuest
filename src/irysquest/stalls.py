@@ -32,7 +32,7 @@ def find_stalls(today: dict, proposals: list[dict], stall_days: int, now: dateti
     pending_for = {p.get("quest") for p in proposals if p.get("status") == "pending"}
     rejected_for: dict[str, list[str]] = {}
     for p in proposals:
-        if p.get("status") == "rejected" and p.get("op") == "propose_set_next_step" and p.get("quest"):
+        if p.get("status") == "rejected" and (p.get("op") or "").removeprefix("propose_") == "set_next_step" and p.get("quest"):
             rejected_for.setdefault(p["quest"], []).append(p.get("after", ""))
 
     stalls: list[Stall] = []

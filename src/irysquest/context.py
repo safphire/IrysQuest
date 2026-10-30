@@ -71,9 +71,10 @@ def reconcile(ctx: Context, proposals: list[dict]) -> None:
         n = by_title.get(p.get("quest") or "")
         if not n:
             continue
-        if p.get("op") == "propose_park_quest" and p.get("status") == "rejected":
+        op = (p.get("op") or "").removeprefix("propose_")   # the server stores "set_next_step", not the tool name
+        if op == "park_quest" and p.get("status") == "rejected":
             n.rejected_park = True
-        if p.get("op") != "propose_set_next_step":
+        if op != "set_next_step":
             continue
         step = p.get("after", "")
         if p.get("status") in ("accepted", "edited") and step and step not in n.accepted:

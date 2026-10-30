@@ -50,7 +50,7 @@ def _call(name: str, a: dict) -> tuple[dict | str, bool]:
             return "reason is required", True
         qid = a.get("quest_id") or a.get("parent_id")
         title = next((q["title"] for q in QUESTS if q["id"] == qid), a.get("title"))
-        p = {"id": f"p{len(PROPOSALS) + 1}", "op": name, "payload": a, "status": "pending",
+        p = {"id": f"p{len(PROPOSALS) + 1}", "op": name.removeprefix("propose_"), "payload": a, "status": "pending",
              "quest": title, "after": a.get("text") or a.get("title", ""), "reason": a.get("reason")}
         PROPOSALS.append(p)
         return p, False

@@ -68,12 +68,12 @@ def test_coach_can_park_but_not_after_a_rejected_park(world):
     client, cf = world
     muse = ScriptedMuse([{"role": "assistant", "content": None, "tool_calls": [call("park_quest", reason="It keeps losing to the others.", assumption="a someday goal")]}])
     res = Agent(client, muse, cf, stall_days=3).dig()
-    assert res[0].move == "park_quest" and fake_server.PROPOSALS[-1]["op"] == "propose_park_quest"
+    assert res[0].move == "park_quest" and fake_server.PROPOSALS[-1]["op"] == "park_quest"
     # user rejects the park; next run the coach wants to park again → guardrail blocks it
     fake_server.PROPOSALS[-1]["status"] = "rejected"
     muse2 = ScriptedMuse([{"role": "assistant", "content": None, "tool_calls": [call("park_quest", reason="again", assumption="x")]}])
     res2 = Agent(client, muse2, cf, stall_days=3).dig()
-    assert res2[0].outcome != "proposed" or fake_server.PROPOSALS[-1]["op"] != "propose_park_quest"
+    assert res2[0].outcome != "proposed" or fake_server.PROPOSALS[-1]["op"] != "park_quest"
     assert ctx_store.load(cf).quests["q1"].rejected_park is True
 
 
