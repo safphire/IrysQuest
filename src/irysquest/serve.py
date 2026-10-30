@@ -53,6 +53,8 @@ ul.q{padding-left:18px}ul.q li{margin:6px 0}small{color:var(--mute)}
 <div class="row"><button id="dig" class="primary">Dig now</button><button id="digdry">Preview only</button></div></div>
 <div class="card"><h2>About you</h2><p><small>Who you are, your schedule, what a "small step" means for you. The agent reads this every time.</small></p>
 <textarea id="profile"></textarea><div class="row"><button id="saveprofile">Save</button></div></div>
+<div class="card"><h2>Your rules for the coach</h2><p><small>Standing instructions it must follow, e.g. "never park the pilot script", "no steps before 9am", "I prefer physical actions over screen ones".</small></p>
+<textarea id="rules"></textarea><div class="row"><button id="saverules">Save</button></div></div>
 </div>
 
 <div class="card"><h2>Result</h2><div id="result"><small>Nothing yet.</small></div></div>
@@ -65,10 +67,10 @@ const H={'ngrok-skip-browser-warning':'1'};
 const api=(p,opt={})=>fetch(p+(isTry?(p.includes('?')?'&':'?')+'try='+encodeURIComponent(tryTok):''),Object.assign({headers:H},opt)).then(r=>r.json());
 function show(j){const r=document.getElementById('result');if(j.error){r.innerHTML='<b>Hmm.</b> '+esc(j.error);return}
  if(j.quests){r.innerHTML=(j.transcript?'<p><small>Heard: '+esc(j.transcript)+'</small></p>':'')+'<ul class="q">'+j.quests.map(q=>'<li><b>'+esc(q.title)+'</b>'+(q.next_step?'<br><small>first step: '+esc(q.next_step)+'</small>':'')+(q.outcome==='proposed'?' <span class="pill">proposed</span>':q.outcome==='preview'?' <span class="pill">preview</span>':'')+'</li>').join('')+'</ul>';return}
- if(j.results){r.innerHTML=j.results.length?'<ul class="q">'+j.results.map(x=>'<li><b>'+esc(x.title)+'</b> — '+esc(x.step)+' <small>('+x.minutes+' min, '+esc(x.outcome)+')</small></li>').join('')+'</ul>':'<small>Nothing is buried.</small>';return}
+ if(j.results){r.innerHTML=j.results.length?'<ul class="q">'+j.results.map(x=>'<li><b>'+esc(x.title)+'</b> — <span class="pill">'+esc(x.move||'')+'</span> '+esc(x.step)+(x.minutes?' <small>('+x.minutes+' min)</small>':'')+' <small>'+esc(x.outcome)+'</small>'+(x.assumption?'<br><small>assuming: '+esc(x.assumption)+'</small>':'')+'</li>').join('')+'</ul>':'<small>Nothing is buried.</small>';return}
  r.innerHTML='<small>'+esc(JSON.stringify(j))+'</small>'}
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
-async function refreshLog(){try{const j=await api('/log');document.getElementById('log').textContent=j.log.map(l=>l.at.slice(11)+'  '+l.text).join('\\n');if(j.profile!==undefined)document.getElementById('profile').value=j.profile}catch(e){}}
+async function refreshLog(){try{const j=await api('/log');document.getElementById('log').textContent=j.log.map(l=>l.at.slice(11)+'  '+l.text).join('\\n');if(j.profile!==undefined&&document.activeElement.id!=='profile')document.getElementById('profile').value=j.profile;if(j.rules!==undefined&&document.activeElement.id!=='rules')document.getElementById('rules').value=j.rules}catch(e){}}
 let mr,chunks=[];
 document.getElementById('rec').onclick=async()=>{const s=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];mr=new MediaRecorder(s);mr.ondataavailable=e=>chunks.push(e.data);
  mr.onstop=async()=>{s.getTracks().forEach(t=>t.stop());document.getElementById('recstate').innerHTML='<small>sending…</small>';const b=new Blob(chunks,{type:mr.mimeType||'audio/webm'});
@@ -81,6 +83,7 @@ document.getElementById('senddump').onclick=async()=>{const t=document.getElemen
  const j=await api('/text',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({text:t})});show(j);refreshLog()};
 document.getElementById('dig').onclick=async()=>{document.getElementById('result').innerHTML='<small>digging…</small>';show(await api('/dig',{method:'POST'}));refreshLog()};
 document.getElementById('digdry').onclick=async()=>{document.getElementById('result').innerHTML='<small>previewing…</small>';show(await api('/dig?dry=1',{method:'POST'}));refreshLog()};
+document.getElementById('saverules').onclick=async()=>{await api('/rules',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({rules:document.getElementById('rules').value})});refreshLog()};
 document.getElementById('saveprofile').onclick=async()=>{await api('/profile',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({profile:document.getElementById('profile').value})});refreshLog()};
 refreshLog();setInterval(refreshLog,5000);
 </script></body></html>"""
@@ -122,7 +125,7 @@ def make_handler(state: _State):
             elif path == "/log":
                 ctx = state.agent.ctx
                 visitor = self._is_visitor()
-                self._json(200, {"log": [] if visitor else ctx.log[-60:], **({} if visitor else {"profile": ctx.profile})})
+                self._json(200, {"log": [] if visitor else ctx.log[-60:], **({} if visitor else {"profile": ctx.profile, "rules": ctx.rules})})
             elif path == "/health":
                 self._json(200, {"ok": True})
             else:
@@ -167,6 +170,9 @@ def make_handler(state: _State):
                         return self._json(200, {"results": [r.__dict__ for r in results]})
                     if path == "/profile":
                         ag.set_profile(json.loads(self._body() or b"{}").get("profile", ""))
+                        return self._json(200, {"ok": True})
+                    if path == "/rules":
+                        ag.set_rules(json.loads(self._body() or b"{}").get("rules", ""))
                         return self._json(200, {"ok": True})
                     return self._json(404, {"error": "not found"})
             except MuseError as e:

@@ -26,12 +26,15 @@ class QuestNotes:
     accepted: list[str] = field(default_factory=list)
     rejected: list[str] = field(default_factory=list)
     last_proposed_at: str = ""
+    last_move: str = ""
     asked_for_why: bool = False
+    rejected_park: bool = False
 
 
 @dataclass
 class Context:
     profile: str = ""
+    rules: str = ""           # the user's standing instructions to the coach ("never park X", "mornings only")
     quests: dict[str, QuestNotes] = field(default_factory=dict)
     log: list[dict] = field(default_factory=list)   # the console's recent lines, for the web page
 
@@ -50,7 +53,7 @@ def load(path: Path) -> Context:
     if not path.exists():
         return Context()
     raw = json.loads(path.read_text())
-    ctx = Context(profile=raw.get("profile", ""), log=raw.get("log", []))
+    ctx = Context(profile=raw.get("profile", ""), rules=raw.get("rules", ""), log=raw.get("log", []))
     for qid, n in raw.get("quests", {}).items():
         ctx.quests[qid] = QuestNotes(**{k: v for k, v in n.items() if k in QuestNotes.__dataclass_fields__})
     return ctx
@@ -66,7 +69,11 @@ def reconcile(ctx: Context, proposals: list[dict]) -> None:
     by_title = {n.title: n for n in ctx.quests.values() if n.title}
     for p in proposals:
         n = by_title.get(p.get("quest") or "")
-        if not n or p.get("op") != "propose_set_next_step":
+        if not n:
+            continue
+        if p.get("op") == "propose_park_quest" and p.get("status") == "rejected":
+            n.rejected_park = True
+        if p.get("op") != "propose_set_next_step":
             continue
         step = p.get("after", "")
         if p.get("status") in ("accepted", "edited") and step and step not in n.accepted:

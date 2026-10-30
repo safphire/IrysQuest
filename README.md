@@ -24,10 +24,12 @@ decide. It proposes, you approve; it never acts on its own.
 
 | Trigger | What the agent does | Meta model |
 |---|---|---|
-| Every morning (or `irysquest dig`) | Reads your tracked quests, finds the ones nothing has touched in days, drafts a 2–10 minute first step for each, submits it as a proposal with the reason *and the assumption it made* | Muse Spark |
+| Every morning (or `irysquest dig`) | Reads your tracked quests, finds the ones nothing has touched in days, and hands each to the **coach**: Muse Spark with tools. It looks at the quest, its history and your past decisions if it needs to, then chooses one move: shrink the step to 2–10 minutes, add a subquest, park the quest, ask what it's for, or leave it alone. The move becomes a proposal with its reason and the assumption behind it | Muse Spark, tool calling |
 | A voice brain dump (capture page) | Transcribes, splits the ramble into separate quests, proposes them | Muse Voice Transcribe + Muse Spark |
 | A photo of a notebook page or whiteboard | Reads it, turns it into proposed quests | Muse Spark (vision) |
 | `--provider open` | The same loop on Meta's open-weight Muse Spark Open, via Baseten or Modal | Muse Spark Open |
+
+**It decides, within your rules.** The coach is a tool-calling loop (`coach.py`): read tools to look, one decision tool per move the server allows, a budget of six calls. Your standing rules (`irysquest rules "never park the pilot script"`) go in its system prompt, and hard guardrails sit outside the model: it can't park a quest you refused to park, and it won't ask the same question twice.
 
 **It asks before it guesses.** A quest with no *why* and no history gets a different proposal: a 2-minute step to write what done looks like. Every other proposal states its assumption, so a wrong guess costs you nothing.
 
@@ -84,7 +86,8 @@ pip install -e ".[dev]" && pytest
 
 - [x] Sign in to the server (OAuth 2.1, PKCE) and read quests
 - [x] Stall detection and Muse Spark breakdowns → proposals (`irysquest dig`, `--dry-run` to preview)
-- [x] Context: profile, per-quest memory, ask-for-why, stated assumptions, rejection feedback
+- [x] Context: profile, rules, per-quest memory, ask-for-why, stated assumptions, rejection feedback
+- [x] The coach: tool-calling decisions (shrink / subquest / park / ask / leave) with guardrails
 - [x] `irysquest serve`: morning schedule, Dig now, agent console
 - [x] Capture page: voice (Muse Voice Transcribe), notebook photo (Muse Spark vision), typed; try-it mode
 - [x] Open-weight mode (`--provider open`) — needs a host for Muse Spark Open

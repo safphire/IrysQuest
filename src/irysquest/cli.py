@@ -8,6 +8,7 @@
     irysquest dig              find stalled quests and propose a 2–10 minute step for each
     irysquest capture "text"   turn a brain dump into proposed quests
     irysquest profile [text]   show or set what the agent knows about you
+    irysquest rules [text]     show or set your standing rules for the coach
     irysquest serve            capture page + "dig now" + the morning schedule
 """
 
@@ -78,6 +79,15 @@ def cmd_profile(settings, args) -> int:
     return 0
 
 
+def cmd_rules(settings, args) -> int:
+    if args.text:
+        _agent(settings, args.provider).set_rules(args.text)
+    else:
+        from . import context as ctx_store
+        print(ctx_store.load(settings.context_file).rules or "(no rules yet)")
+    return 0
+
+
 def cmd_serve(settings, args) -> int:
     from .serve import serve
     serve(_agent(settings, args.provider), settings.serve_host, settings.serve_port, settings.dig_at, settings.try_it_token)
@@ -112,6 +122,10 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("profile", help="show or set what the agent knows about you")
     s.add_argument("text", nargs="?", default=None)
     s.set_defaults(fn=cmd_profile)
+
+    s = sub.add_parser("rules", help="show or set your standing rules for the coach")
+    s.add_argument("text", nargs="?", default=None)
+    s.set_defaults(fn=cmd_rules)
 
     sub.add_parser("serve", help="capture page, dig now, and the morning schedule").set_defaults(fn=cmd_serve)
 

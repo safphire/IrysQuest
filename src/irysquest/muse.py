@@ -91,6 +91,20 @@ class Muse:
         except (KeyError, IndexError, ValueError) as e:
             raise MuseError(f"Unexpected reply shape from {self.p.name}: {e}") from e
 
+    def chat_tools(self, messages: list[dict], tools: list[dict], temperature: float = 0.3) -> dict:
+        """One chat turn with function tools. Returns the assistant message (may carry tool_calls)."""
+        r = self._http.post(
+            f"{self.p.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {self.p.api_key}"},
+            json={"model": self.p.model, "messages": messages, "tools": tools, "tool_choice": "auto", "temperature": temperature},
+        )
+        if r.status_code >= 400:
+            raise MuseError(f"{self.p.name} {r.status_code}: {r.text[:300]}")
+        try:
+            return r.json()["choices"][0]["message"]
+        except (KeyError, IndexError, ValueError) as e:
+            raise MuseError(f"Unexpected reply shape from {self.p.name}: {e}") from e
+
     def transcribe(self, audio: bytes, filename: str = "capture.webm") -> str:
         key = self.p.transcribe_api_key or self.p.api_key
         r = self._http.post(

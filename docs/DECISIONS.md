@@ -29,3 +29,11 @@
   apps are on the organisers' overdone list. Try-it mode is a token in the URL and previews only.
 - **D-13 (28 Oct)** Open-weight mode swaps the chat base URL and model only; transcription stays on the Model
   API because Muse Spark Open doesn't do ASR.
+- **D-14 (30 Oct)** The breakdown call became the coach: a tool-calling loop where Muse Spark can look (get_quest,
+  get_history, list_decisions) and must end with one decision call (shrink_step, add_subquest, park_quest,
+  ask_why, leave_alone). Budget six turns. `tool_choice` is "auto" because the Model API accepts nothing else, so a
+  plain-text reply is handled too. The model decides; the agent's guardrails and the server's validation still
+  bound what reaches the user.
+- **D-15 (30 Oct)** Guardrails live in code, not the prompt: no park after a rejected park, no second ask-why,
+  and every proposal still states its assumption. The user's free-text rules go into the prompt as well, but
+  the code-level rules hold even if the model ignores them.

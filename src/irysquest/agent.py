@@ -15,6 +15,7 @@ from pathlib import Path
 from . import context as ctx_store
 from .console import say
 from .mcp_client import QuestClient, ToolError
+from .coach import Coach
 from .muse import CapturedQuest, Muse, MuseError
 from .stalls import find_stalls
 
@@ -31,7 +32,8 @@ class DigResult:
     reason: str = ""
     assumption: str = ""
     proposal_id: str = ""
-    outcome: str = ""   # proposed | dry-run | declined | muse-failed
+    move: str = ""      # shrink_step | add_subquest | park_quest | ask_why | leave_alone
+    outcome: str = ""   # proposed | dry-run | declined | muse-failed | left-alone
 
 
 class Agent:
@@ -72,45 +74,89 @@ class Agent:
         for s in stalls:
             notes = self.ctx.notes(s.quest_id, s.title)
             res = DigResult(quest_id=s.quest_id, title=s.title, days=s.days)
-            self._say(f'"{s.title}" untouched {s.days} days (step: {s.current_step or "none"}). Asking Muse for a smaller first move.')
+            self._say(f'"{s.title}" untouched {s.days} days (step: {s.current_step or "none"}). Handing it to the coach.')
+            rejected = sorted(set(s.rejected + notes.rejected))
+            summary = {
+                "quest_id": s.quest_id, "title": s.title, "why": s.why or "", "current_step": s.current_step or "",
+                "days_untouched": s.days, "steps_user_rejected": rejected, "your_previous_assumption": notes.assumption,
+                "user_rejected_parking_before": notes.rejected_park, "asked_for_why_before": notes.asked_for_why,
+                "slots": f"{today['slots_used']}/{today['slot_cap']}",
+            }
+            reads = {
+                "get_quest": lambda a, qid=s.quest_id: self._safe(lambda: self.client.get_quest(qid)),
+                "get_history": lambda a, qid=s.quest_id: {"entries": history.get(qid, [])},
+                "list_decisions": lambda a, qid=s.quest_id, t=s.title: self._decisions_for(proposals, t),
+            }
             try:
-                b = self.muse.breakdown(
-                    title=s.title, why=s.why, current_step=s.current_step, stalled_days=s.days,
-                    rejected=sorted(set(s.rejected + notes.rejected)), history=history.get(s.quest_id, []),
-                    profile=self.ctx.profile, prior_assumption=notes.assumption,
-                )
+                d = Coach(self.muse, reads).decide(summary, self.ctx.profile, self.ctx.rules)
             except MuseError as e:
                 self._say(f"  Muse couldn't help this time: {e}", "warn")
                 res.outcome = "muse-failed"
                 results.append(res)
                 continue
+            if d.looked_at:
+                self._say(f"  Looked at: {', '.join(d.looked_at)}.")
+            res.move, res.assumption, res.reason = d.move, d.assumption, d.reason
 
-            if b.needs_why and not s.why and not notes.asked_for_why:
-                b.step, b.minutes = WHY_STEP, 2
-                b.reason = "I can't tell yet what this quest is for, so the smallest useful move is to tell me."
+            # ---- guardrails: the user's rules beat the model's choice ----
+            if d.move == "park_quest" and notes.rejected_park:
+                self._say("  Coach wanted to park it, but you said no to that before. Shrinking instead.")
+                d.move = "ask_why" if not s.why else "leave_alone"
+            if d.move == "ask_why" and (s.why or notes.asked_for_why):
+                d.move = "leave_alone"
+                d.reason = "I've already asked what this is for; I'll wait for the why."
+            if d.assumption and d.move not in ("ask_why", "leave_alone"):
+                self._say(f"  Assuming: {d.assumption}")
+                notes.assumption = d.assumption
+                notes.intent = notes.intent or d.assumption
+
+            if d.move == "leave_alone":
+                self._say(f"  Leaving it alone: {d.reason}")
+                res.outcome = "left-alone"
+                results.append(res)
+                continue
+            if d.move == "ask_why":
+                res.step, res.minutes = WHY_STEP, 2
+                res.reason = d.reason or "I can't tell yet what this quest is for, so the smallest useful move is to tell me."
                 notes.asked_for_why = True
                 self._say("  Purpose unclear and no why set: asking instead of guessing.")
-            elif b.assumption:
-                self._say(f"  Assuming: {b.assumption}")
-                notes.assumption = b.assumption
-                notes.intent = notes.intent or b.assumption
+            elif d.move == "shrink_step":
+                res.step = str(d.args.get("step", "")).strip()[:200]
+                res.minutes = max(2, min(10, int(d.args.get("minutes", 5) or 5)))
+            elif d.move == "add_subquest":
+                res.step = f"{d.args.get('title', '').strip()[:120]} → {d.args.get('next_step', '').strip()[:120]}"
+                res.minutes = 5
+            elif d.move == "park_quest":
+                res.step, res.minutes = "Park this quest (move to Later; nothing is deleted)", 0
 
-            res.step, res.minutes, res.reason, res.assumption = b.step, b.minutes, b.reason, b.assumption
-            self._say(f'  → "{b.step}" ({b.minutes} min). {b.reason}')
+            if d.move == "shrink_step" and not res.step:
+                self._say("  Coach returned an empty step; skipping.", "warn")
+                res.outcome = "muse-failed"
+                results.append(res)
+                continue
+            label = {"shrink_step": "step", "add_subquest": "subquest", "park_quest": "park", "ask_why": "question"}[d.move]
+            self._say(f'  → {label}: "{res.step}"' + (f" ({res.minutes} min)" if res.minutes else "") + f". {res.reason}")
             if dry_run:
                 res.outcome = "dry-run"
                 results.append(res)
                 continue
 
-            reason = b.reason
-            if b.assumption and not b.needs_why:
-                reason += f" (I'm assuming this is {b.assumption}; correct me in the Why if not.)"
-            reason += f" Untouched {s.days} days; about {b.minutes} minutes."
+            reason = res.reason
+            if d.assumption and d.move not in ("ask_why",):
+                reason += f" (I'm assuming this is {d.assumption}; correct me in the Why if not.)"
+            reason += f" Untouched {s.days} days" + (f"; about {res.minutes} minutes." if res.minutes else ".")
+            reason = reason[:1000]
             try:
-                r = self.client.propose_set_next_step(s.quest_id, b.step, reason=reason[:1000])
+                if d.move in ("shrink_step", "ask_why"):
+                    r = self.client.propose_set_next_step(s.quest_id, res.step, reason=reason)
+                elif d.move == "add_subquest":
+                    r = self.client.propose_add_subquest(s.quest_id, str(d.args.get("title", ""))[:500], reason=reason, next_step=str(d.args.get("next_step", ""))[:2000] or None)
+                else:
+                    r = self.client.propose_park_quest(s.quest_id, reason=reason)
                 res.proposal_id, res.outcome = str(r.get("proposal_id", "")), "proposed"
                 notes.last_proposed_at = datetime.now().isoformat(timespec="seconds")
-                self._say(f"  Proposed. Waiting for your call in the app.")
+                notes.last_move = d.move
+                self._say("  Proposed. Waiting for your call in the app.")
             except ToolError as e:
                 res.outcome = "declined"
                 self._say(f"  Server declined: {e}", "warn")
@@ -120,6 +166,19 @@ class Agent:
         self._say("Dry run: nothing was proposed." if dry_run else f"{made} proposal(s) waiting for your call.")
         self._save()
         return results
+
+    @staticmethod
+    def _safe(fn):
+        try:
+            return fn()
+        except ToolError as e:
+            return {"error": str(e)}
+
+    @staticmethod
+    def _decisions_for(proposals: list[dict], title: str) -> dict:
+        rows = [{"op": p.get("op"), "proposed": p.get("after"), "status": p.get("status"), "at": p.get("created_at", "")[:10]}
+                for p in proposals if p.get("quest") == title]
+        return {"decisions": rows[-10:]}
 
     def _history_by_quest(self, days: int = 30) -> dict[str, list[str]]:
         out: dict[str, list[str]] = {}
@@ -159,4 +218,9 @@ class Agent:
     def set_profile(self, text: str) -> None:
         self.ctx.profile = text.strip()[:1500]
         self._say("Profile updated.")
+        self._save()
+
+    def set_rules(self, text: str) -> None:
+        self.ctx.rules = text.strip()[:1500]
+        self._say("Rules updated.")
         self._save()
