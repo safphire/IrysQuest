@@ -52,7 +52,7 @@ class Context:
 def load(path: Path) -> Context:
     if not path.exists():
         return Context()
-    raw = json.loads(path.read_text())
+    raw = json.loads(path.read_text(encoding="utf-8"))
     ctx = Context(profile=raw.get("profile", ""), rules=raw.get("rules", ""), log=raw.get("log", []))
     for qid, n in raw.get("quests", {}).items():
         ctx.quests[qid] = QuestNotes(**{k: v for k, v in n.items() if k in QuestNotes.__dataclass_fields__})
@@ -61,7 +61,7 @@ def load(path: Path) -> Context:
 
 def save(path: Path, ctx: Context) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(asdict(ctx), indent=2, ensure_ascii=False))
+    path.write_text(json.dumps(asdict(ctx), indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def reconcile(ctx: Context, proposals: list[dict]) -> None:
