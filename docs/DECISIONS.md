@@ -37,3 +37,7 @@
 - **D-15 (30 Oct)** Guardrails live in code, not the prompt: no park after a rejected park, no second ask-why,
   and every proposal still states its assumption. The user's free-text rules go into the prompt as well, but
   the code-level rules hold even if the model ignores them.
+- **D-16 (31 Oct)** Voice recordings are converted to WAV in the browser, not on the PC. Muse Voice Transcribe
+  accepts only mono 16-bit PCM WAV at 16 or 24 kHz, and phone browsers record webm/opus or mp4. The page decodes
+  the recording with the Web Audio API, renders it to one 16 kHz channel and writes a plain WAV header, so the
+  server just forwards bytes. ffmpeg on the PC would have been an install step for every judge.

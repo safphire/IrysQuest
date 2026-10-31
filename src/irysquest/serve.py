@@ -71,10 +71,21 @@ function show(j){const r=document.getElementById('result');if(j.error){r.innerHT
  r.innerHTML='<small>'+esc(JSON.stringify(j))+'</small>'}
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 async function refreshLog(){try{const j=await api('/log');document.getElementById('log').textContent=j.log.map(l=>l.at.slice(11)+'  '+l.text).join('\\n');if(j.profile!==undefined&&document.activeElement.id!=='profile')document.getElementById('profile').value=j.profile;if(j.rules!==undefined&&document.activeElement.id!=='rules')document.getElementById('rules').value=j.rules}catch(e){}}
+// Muse Voice Transcribe takes only mono 16-bit PCM WAV at 16 or 24 kHz; browsers record webm/mp4. Convert here.
+async function toWav(blob){const ac=new(window.AudioContext||window.webkitAudioContext)();
+ try{const src=await ac.decodeAudioData(await blob.arrayBuffer());const n=Math.max(1,Math.ceil(src.duration*16000));
+  const oc=new OfflineAudioContext(1,n,16000);const node=oc.createBufferSource();node.buffer=src;node.connect(oc.destination);node.start();  // 1 channel at 16 kHz: mixes down and resamples
+  const pcm=(await oc.startRendering()).getChannelData(0);const v=new DataView(new ArrayBuffer(44+pcm.length*2));
+  const tag=(o,s)=>{for(let i=0;i<4;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  tag(0,'RIFF');v.setUint32(4,36+pcm.length*2,true);tag(8,'WAVE');tag(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,16000,true);v.setUint32(28,32000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);tag(36,'data');v.setUint32(40,pcm.length*2,true);
+  for(let i=0;i<pcm.length;i++){const x=Math.max(-1,Math.min(1,pcm[i]));v.setInt16(44+i*2,x<0?x*32768:x*32767,true)}
+  return new Blob([v],{type:'audio/wav'})}finally{ac.close()}}
 let mr,chunks=[];
 document.getElementById('rec').onclick=async()=>{const s=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];mr=new MediaRecorder(s);mr.ondataavailable=e=>chunks.push(e.data);
- mr.onstop=async()=>{s.getTracks().forEach(t=>t.stop());document.getElementById('recstate').innerHTML='<small>sending…</small>';const b=new Blob(chunks,{type:mr.mimeType||'audio/webm'});
- const j=await api('/voice',{method:'POST',headers:Object.assign({'Content-Type':b.type||'audio/webm'},H),body:b});show(j);document.getElementById('recstate').innerHTML='<small>idle</small>';refreshLog()};
+ mr.onstop=async()=>{s.getTracks().forEach(t=>t.stop());document.getElementById('recstate').innerHTML='<small>sending…</small>';let wav;
+ try{wav=await toWav(new Blob(chunks,{type:mr.mimeType||'audio/webm'}))}catch(e){show({error:"This browser couldn't convert the recording to WAV: "+((e&&e.message)||e)});document.getElementById('recstate').innerHTML='<small>idle</small>';return}
+ const j=await api('/voice',{method:'POST',headers:Object.assign({'Content-Type':'audio/wav'},H),body:wav});show(j);document.getElementById('recstate').innerHTML='<small>idle</small>';refreshLog()};
  mr.start();document.getElementById('rec').classList.add('rec');document.getElementById('rec').disabled=true;document.getElementById('stop').disabled=false;document.getElementById('recstate').innerHTML='<small>recording…</small>'};
 document.getElementById('stop').onclick=()=>{mr.stop();document.getElementById('rec').classList.remove('rec');document.getElementById('rec').disabled=false;document.getElementById('stop').disabled=true};
 document.getElementById('sendphoto').onclick=async()=>{const f=document.getElementById('photo').files[0];if(!f)return;document.getElementById('result').innerHTML='<small>reading…</small>';
@@ -150,7 +161,7 @@ def make_handler(state: _State):
                         if len(audio) < 1000:
                             return self._json(400, {"error": "That recording is empty."})
                         ag._say(f"Transcribing {len(audio) // 1024} KB of audio with Muse Voice Transcribe.")
-                        transcript = ag.muse.transcribe(audio, "capture.webm")
+                        transcript = ag.muse.transcribe(audio, "capture.wav")
                         ag._say(f'Heard: "{transcript[:160]}{"…" if len(transcript) > 160 else ""}"')
                         quests = ag.muse.capture_text(transcript, "" if visitor else ag.ctx.profile)
                         return self._json(200, {"transcript": transcript, "quests": ag.capture(quests, source="voice note", preview=preview)})
