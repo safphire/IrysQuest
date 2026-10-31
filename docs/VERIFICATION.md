@@ -40,10 +40,20 @@ hashes but identical trees; it was reset to `origin/main` (old tip kept as `back
   (22.05 kHz was rejected: "expected mono s16le at 16000 or 24000 Hz"). The page records with `MediaRecorder`,
   which gives webm/opus (Android Chrome) or mp4 (Safari). Options: encode 16 kHz WAV in the page with the Web
   Audio API (no dependency, ~30 lines of JS), or convert on the PC with ffmpeg (new dependency).
-- Cosmetic: when stderr is redirected on Windows, "→" in console lines prints as `→`
+- Cosmetic: when stderr is redirected on Windows, "→" in console lines prints as `\u2192`
   (`PYTHONIOENCODING=utf-8` avoids it). A real console is fine.
 
 ### Left on the server from this run
 
 Pending proposals: the `ask_why` step on the Kurzgesagt quest, the four captured quests, and
 "water the balcony plants every Sunday" from the `/text` check.
+
+## 31 Oct 2026 — voice decision
+
+- Voice: converted in the browser (D-16). Checked in a Chromium page running the real page script: an 8 kHz
+  stereo WAV and a `MediaRecorder` webm/opus clip both came out as mono 16-bit 16 kHz WAV, and the converted
+  speech transcribed correctly through `Muse.transcribe`. An undecodable recording shows the decoder's error in
+  the Result box. Not yet tried on a real phone through `serve`: the ngrok tunnel was offline at the time.
+- The `\u2192` arrow under redirection stays as is.
+- Seen in passing: when the server is unreachable, a failed token refresh says "Session expired … run
+  `irysquest login`" even though the tokens are fine (here ngrok's 404, ERR_NGROK_3200).
