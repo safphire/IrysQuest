@@ -41,3 +41,7 @@
   accepts only mono 16-bit PCM WAV at 16 or 24 kHz, and phone browsers record webm/opus or mp4. The page decodes
   the recording with the Web Audio API, renders it to one 16 kHz channel and writes a plain WAV header, so the
   server just forwards bytes. ffmpeg on the PC would have been an install step for every judge.
+- **D-17 (1 Nov)** The weekly reckoning is a separate, single call over the whole board, not part of the per-quest
+  coach loop: the question is different (what is crowding what?) and the answer is one verdict. Park is the only
+  verdict that proposes anything; focus and fine are advice in the console. The same guardrails apply: a quest the
+  user refused to park is downgraded to focus. Runs on Sundays with the morning dig, or on demand.

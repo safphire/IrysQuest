@@ -50,7 +50,7 @@ ul.q{padding-left:18px}ul.q li{margin:6px 0}small{color:var(--mute)}
 
 <div id="owner">
 <div class="card"><h2>Dig now</h2><p><small>Runs the morning check this minute: stalled quests get a 2–10 minute first step proposed.</small></p>
-<div class="row"><button id="dig" class="primary">Dig now</button><button id="digdry">Preview only</button></div></div>
+<div class="row"><button id="dig" class="primary">Dig now</button><button id="digdry">Preview only</button><button id="reckon">Weekly reckoning</button></div></div>
 <div class="card"><h2>About you</h2><p><small>Who you are, your schedule, what a "small step" means for you. The agent reads this every time.</small></p>
 <textarea id="profile"></textarea><div class="row"><button id="saveprofile">Save</button></div></div>
 <div class="card"><h2>Your rules for the coach</h2><p><small>Standing instructions it must follow, e.g. "never park the pilot script", "no steps before 9am", "I prefer physical actions over screen ones".</small></p>
@@ -93,6 +93,7 @@ document.getElementById('sendphoto').onclick=async()=>{const f=document.getEleme
 document.getElementById('senddump').onclick=async()=>{const t=document.getElementById('dump').value.trim();if(!t)return;document.getElementById('result').innerHTML='<small>thinking…</small>';
  const j=await api('/text',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({text:t})});show(j);refreshLog()};
 document.getElementById('dig').onclick=async()=>{document.getElementById('result').innerHTML='<small>digging…</small>';show(await api('/dig',{method:'POST'}));refreshLog()};
+document.getElementById('reckon').onclick=async()=>{document.getElementById('result').innerHTML='<small>looking at the whole board…</small>';const j=await api('/reckon',{method:'POST'});const r=document.getElementById('result');r.innerHTML=j.error?esc(j.error):'<p><span class="pill">'+esc(j.verdict)+'</span> '+esc(j.reason)+'</p><p><small>'+esc(j.board_read)+'</small></p>';refreshLog()};
 document.getElementById('digdry').onclick=async()=>{document.getElementById('result').innerHTML='<small>previewing…</small>';show(await api('/dig?dry=1',{method:'POST'}));refreshLog()};
 document.getElementById('saverules').onclick=async()=>{await api('/rules',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({rules:document.getElementById('rules').value})});refreshLog()};
 document.getElementById('saveprofile').onclick=async()=>{await api('/profile',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({profile:document.getElementById('profile').value})});refreshLog()};
@@ -179,6 +180,9 @@ def make_handler(state: _State):
                         dry = (parse_qs(urlparse(self.path).query).get("dry") or ["0"])[0] == "1"
                         results = ag.dig(dry_run=dry)
                         return self._json(200, {"results": [r.__dict__ for r in results]})
+                    if path == "/reckon":
+                        v = ag.reckoning()
+                        return self._json(200, v.__dict__)
                     if path == "/profile":
                         ag.set_profile(json.loads(self._body() or b"{}").get("profile", ""))
                         return self._json(200, {"ok": True})
@@ -213,6 +217,8 @@ def _schedule(state: _State, dig_at: str, stop: threading.Event) -> None:
             try:
                 state.agent._say("Morning. Checking what's buried.")
                 state.agent.dig()
+                if datetime.now().weekday() == 6:   # Sunday: the weekly reckoning
+                    state.agent.reckoning()
             except Exception as e:
                 state.agent._say(f"Scheduled dig failed: {e!r}", "warn")
 

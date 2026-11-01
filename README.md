@@ -25,6 +25,7 @@ decide. It proposes, you approve; it never acts on its own.
 | Trigger | What the agent does | Meta model |
 |---|---|---|
 | Every morning (or `irysquest dig`) | Reads your tracked quests, finds the ones nothing has touched in days, and hands each to the **coach**: Muse Spark with tools. It looks at the quest, its history and your past decisions if it needs to, then chooses one move: shrink the step to 2–10 minutes, add a subquest, park the quest, ask what it's for, or leave it alone. The move becomes a proposal with its reason and the assumption behind it | Muse Spark, tool calling |
+| Sundays (or `irysquest reckon`) | The **weekly reckoning**: the coach reads the whole board at once and gives one verdict. *Park* one quest that's crowding the others, naming what it makes room for; *focus* on one this week; or *fine*. An AI that sometimes tells you to do less | Muse Spark |
 | A voice brain dump (capture page) | Transcribes, splits the ramble into separate quests, proposes them | Muse Voice Transcribe + Muse Spark |
 | A photo of a notebook page or whiteboard | Reads it, turns it into proposed quests | Muse Spark (vision) |
 | `--provider open` | The same loop on Meta's open-weight Muse Spark Open, via Baseten or Modal | Muse Spark Open |
@@ -88,6 +89,7 @@ pip install -e ".[dev]" && pytest
 - [x] Stall detection and Muse Spark breakdowns → proposals (`irysquest dig`, `--dry-run` to preview)
 - [x] Context: profile, rules, per-quest memory, ask-for-why, stated assumptions, rejection feedback
 - [x] The coach: tool-calling decisions (shrink / subquest / park / ask / leave) with guardrails
+- [x] The weekly reckoning: one cross-quest verdict (park / focus / fine), Sundays
 - [x] `irysquest serve`: morning schedule, Dig now, agent console
 - [x] Capture page: voice (Muse Voice Transcribe), notebook photo (Muse Spark vision), typed; try-it mode
 - [x] Open-weight mode (`--provider open`) — needs a host for Muse Spark Open

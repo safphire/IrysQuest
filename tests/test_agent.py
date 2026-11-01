@@ -102,3 +102,41 @@ def test_capture_preview_proposes_nothing(world):
     assert [r["outcome"] for r in rows] == ["preview", "preview"] and fake_server.PROPOSALS == []
     rows = ag.capture(ag.muse.capture_text("fix the bike", ""), source="notes")
     assert rows[0]["outcome"] == "proposed" and fake_server.PROPOSALS[-1]["payload"]["track"] is False
+
+
+class ReckonMuse:
+    def __init__(self, reply):
+        self.reply = reply
+
+    def chat(self, messages, temperature=0.4):
+        return self.reply
+
+
+def test_reckoning_parks_with_a_reason(world):
+    client, cf = world
+    fake_server.QUESTS[1]["touched_at"] = "2026-10-05T08:00:00"   # two stalled tracked quests
+    muse = ReckonMuse('{"verdict":"park","quest_id":"q1","makes_room_for":"Ship Scriptory v2","reason":"Singing has waited a month.","board_read":"One mover, one sleeper."}')
+    v = Agent(client, muse, cf, stall_days=3).reckoning()
+    assert v.verdict == "park" and fake_server.PROPOSALS[-1]["op"] == "park_quest"
+    assert "Ship Scriptory v2" in fake_server.PROPOSALS[-1]["payload"]["reason"]
+
+
+def test_reckoning_respects_a_refused_park(world):
+    client, cf = world
+    fake_server.QUESTS[1]["touched_at"] = "2026-10-05T08:00:00"
+    ctx = ctx_store.Context()
+    ctx.notes("q1", "Learn to sing").rejected_park = True
+    ctx_store.save(cf, ctx)
+    muse = ReckonMuse('{"verdict":"park","quest_id":"q1","makes_room_for":"x","reason":"again","board_read":"b"}')
+    v = Agent(client, muse, cf, stall_days=3).reckoning()
+    assert v.verdict == "focus" and v.blocked and fake_server.PROPOSALS == []
+
+
+def test_reckoning_single_quest_is_fine(world):
+    client, cf = world
+    fake_server.QUESTS[1]["status"] = "later"
+    try:
+        v = Agent(client, ReckonMuse("unused"), cf, stall_days=3).reckoning()
+    finally:
+        fake_server.QUESTS[1]["status"] = "tracked"
+    assert v.verdict == "fine" and "Only one quest" in v.reason and fake_server.PROPOSALS == []

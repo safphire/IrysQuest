@@ -16,6 +16,7 @@ from . import context as ctx_store
 from .console import say
 from .mcp_client import QuestClient, ToolError
 from .coach import Coach
+from .reckoning import Verdict, reckon
 from .muse import CapturedQuest, Muse, MuseError
 from .stalls import find_stalls
 
@@ -214,6 +215,61 @@ class Agent:
             self._say(f"{sum(1 for r in out if r['outcome'] == 'proposed')} proposal(s) waiting in the app.")
         self._save()
         return out
+
+    # ---- the weekly reckoning: the whole board at once -----------------------------------
+
+    def reckoning(self, *, dry_run: bool = False) -> Verdict:
+        self._say("Weekly reckoning: looking at the whole board, not one quest.")
+        today = self.client.get_today()
+        proposals: list[dict] = []
+        for st in ("pending", "rejected", "accepted", "edited"):
+            proposals += self.client.list_proposals(st).get("proposals", [])
+        ctx_store.reconcile(self.ctx, proposals)
+        history = self._history_by_quest(30)
+        now = datetime.now()
+        board = []
+        protected: set[str] = set()
+        for q in today.get("tracked", []):
+            n = self.ctx.notes(q["id"], q["title"])
+            if n.rejected_park:
+                protected.add(q["id"])
+            touched = datetime.fromisoformat(q["touched_at"].replace("Z", "+00:00")).replace(tzinfo=None)
+            done = [h for h in history.get(q["id"], []) if "done" in h.lower() or "completed" in h.lower()]
+            board.append({
+                "id": q["id"], "title": q["title"], "why": q.get("why") or "", "current_step": (q.get("next_step") or {}).get("text", ""),
+                "days_since_anything_moved": (now - touched).days, "steps_completed_last_30_days": len(done),
+                "accepted_from_coach": n.accepted[-3:], "rejected_from_coach": n.rejected[-3:], "user_refused_parking": n.rejected_park,
+            })
+        if len(board) < 2:
+            v = Verdict("fine", reason="Only one quest is tracked; nothing can crowd it out.", board_read="A quiet board.")
+            self._say(f"  {v.reason}")
+            self._save()
+            return v
+        try:
+            v = reckon(self.muse, board, self.ctx.profile, self.ctx.rules, protected)
+        except MuseError as e:
+            self._say(f"  Muse couldn't help this time: {e}", "warn")
+            return Verdict("fine", reason=str(e))
+        self._say(f"  Board: {v.board_read}")
+        if v.blocked:
+            self._say(f"  Coach wanted to park, but {v.blocked}. Downgrading to focus.")
+        title = next((q["title"] for q in board if q["id"] == v.quest_id), "")
+        if v.verdict == "park":
+            self._say(f'  → park "{title}" to make room for "{v.makes_room_for}". {v.reason}')
+            if not dry_run:
+                try:
+                    reason = f"{v.reason} (Weekly reckoning: freeing this slot for \"{v.makes_room_for}\". Nothing is deleted; it moves to Later.)"
+                    r = self.client.propose_park_quest(v.quest_id, reason=reason[:1000])
+                    self._say("  Proposed. Your call in the app.")
+                except ToolError as e:
+                    self._say(f"  Server declined: {e}", "warn")
+        elif v.verdict == "focus":
+            self._say(f'  → focus on "{title}" this week. {v.reason} (No change proposed.)')
+        else:
+            self._say(f"  → the board is fine. {v.reason}")
+        self.ctx.remember(f"reckoning:{v.verdict}:{title}", "reckoning")
+        self._save()
+        return v
 
     def set_profile(self, text: str) -> None:
         self.ctx.profile = text.strip()[:1500]

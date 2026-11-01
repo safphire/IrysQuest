@@ -7,6 +7,7 @@
     irysquest tools            list the MCP tools the server offers
     irysquest dig              find stalled quests and propose a 2–10 minute step for each
     irysquest capture "text"   turn a brain dump into proposed quests
+    irysquest reckon           the weekly reckoning: the whole board at once
     irysquest profile [text]   show or set what the agent knows about you
     irysquest rules [text]     show or set your standing rules for the coach
     irysquest serve            capture page + "dig now" + the morning schedule
@@ -62,6 +63,11 @@ def cmd_dig(settings, args) -> int:
     return 0
 
 
+def cmd_reckon(settings, args) -> int:
+    _agent(settings, args.provider).reckoning(dry_run=args.dry_run)
+    return 0
+
+
 def cmd_capture(settings, args) -> int:
     ag = _agent(settings, args.provider)
     quests = ag.muse.capture_text(args.text, ag.ctx.profile)
@@ -113,6 +119,10 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--dry-run", action="store_true", help="show what would be proposed, propose nothing")
     s.add_argument("--days", type=int, default=None, help="stall threshold in days (default: STALL_DAYS)")
     s.set_defaults(fn=cmd_dig)
+
+    s = sub.add_parser("reckon", help="weekly reckoning: look at all tracked quests together")
+    s.add_argument("--dry-run", action="store_true")
+    s.set_defaults(fn=cmd_reckon)
 
     s = sub.add_parser("capture", help="turn a brain dump into proposed quests")
     s.add_argument("text")
