@@ -20,6 +20,7 @@ import shutil
 import socket
 import ssl
 import subprocess
+import sys
 import threading
 import time
 from datetime import datetime, timedelta
@@ -260,6 +261,14 @@ def ensure_cert(tls_dir: Path, ip: str) -> tuple[Path, Path]:
     return cert, key
 
 
+class CaptureServer(ThreadingHTTPServer):
+    def handle_error(self, request, client_address):
+        # A phone refusing the self-signed certificate, or plain http on the https port: expected, not worth a traceback.
+        if isinstance(sys.exc_info()[1], (ssl.SSLError, ConnectionError)):
+            return
+        super().handle_error(request, client_address)
+
+
 def use_tls(srv: ThreadingHTTPServer, cert: Path, key: Path) -> None:
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.load_cert_chain(cert, key)
@@ -272,7 +281,7 @@ def serve(agent: Agent, host: str, port: int, dig_at: str, try_token: str, tls_d
     state.agent, state.try_token = agent, try_token
     stop = threading.Event()
     threading.Thread(target=_schedule, args=(state, dig_at, stop), daemon=True).start()
-    srv = ThreadingHTTPServer((host, port), make_handler(state))
+    srv = CaptureServer((host, port), make_handler(state))
     ip, scheme = lan_ip(), "https" if tls_dir else "http"
     if tls_dir:
         use_tls(srv, *ensure_cert(tls_dir, ip))

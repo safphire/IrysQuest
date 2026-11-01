@@ -4,7 +4,7 @@
 import shutil
 import ssl
 import threading
-from http.server import ThreadingHTTPServer
+import time
 from types import SimpleNamespace
 
 import httpx
@@ -24,15 +24,22 @@ def test_cert_covers_localhost_and_the_lan_ip(tmp_path):
     assert serve.ensure_cert(tmp_path / "tls", "10.0.0.9") == (cert, key) and cert.stat().st_mtime == mtime
 
 
-def test_page_is_served_over_https(tmp_path):
+def test_page_is_served_over_https(tmp_path, capfd):
     state = serve._State()
     state.agent, state.try_token = SimpleNamespace(ctx=SimpleNamespace(log=[], profile="", rules="")), ""
-    srv = ThreadingHTTPServer(("127.0.0.1", 0), serve.make_handler(state))
+    srv = serve.CaptureServer(("127.0.0.1", 0), serve.make_handler(state))
     serve.use_tls(srv, *serve.ensure_cert(tmp_path / "tls", "127.0.0.1"))
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     try:
         base = f"https://127.0.0.1:{srv.server_address[1]}"
         assert httpx.get(f"{base}/health", verify=False).json() == {"ok": True}
         assert "getUserMedia" in httpx.get(f"{base}/", verify=False).text
+        # Plain http on the https port and a client that refuses the certificate are dropped without a traceback.
+        with pytest.raises(httpx.HTTPError):
+            httpx.get(f"http://127.0.0.1:{srv.server_address[1]}/health", timeout=3)
+        with pytest.raises(httpx.HTTPError):
+            httpx.get(f"{base}/health", timeout=3)
+        time.sleep(0.3)
+        assert "Traceback" not in capfd.readouterr().err
     finally:
         srv.shutdown()
