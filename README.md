@@ -11,8 +11,10 @@ Built during the [Meta Global AI Developer Hackathon](https://dev.meta.ai/events
 
 ## The problem
 
-People who have more intentions than attention don't lose their goals to forgetting. They lose them to **burial**:
-each new idea lands on the last, and the ones that mattered sink out of sight.
+People with more intentions than attention lose goals two ways. Some are forgotten; NextQuest's two-second
+capture is for those. The rest are **buried**: written down, known, and still not started, because each new want
+lands on the last and the ones that mattered sink out of sight. That is procrastination, and it is what IrysQuest
+is for.
 
 Every productivity tool today waits for you to come back and ask for help. But a person who is stuck doesn't come
 back; that's what stuck means.
