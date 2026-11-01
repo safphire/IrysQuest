@@ -4,8 +4,8 @@
 - Muse Spark (text + vision): breakdowns of stalled quests, and turning a brain
   dump or a notebook photo into quests.
 - Muse Voice Transcribe: audio → text.
-- Provider "open": the same calls against Muse Spark Open on a host you choose
-  (Baseten, Modal, or a local server), for the open-weight mode.
+- Provider "open": the same calls against Muse Glimmer on any OpenAI-compatible
+  host (Ollama, vLLM, or a hosted endpoint), for the open-weight mode.
 
 Replies are asked for as JSON and parsed defensively: anything that can't be
 parsed is dropped, never half-proposed.

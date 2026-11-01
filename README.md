@@ -28,7 +28,7 @@ decide. It proposes, you approve; it never acts on its own.
 | Sundays (or `irysquest reckon`) | The **weekly reckoning**: the coach reads the whole board at once and gives one verdict. *Park* one quest that's crowding the others, naming what it makes room for; *focus* on one this week; or *fine*. An AI that sometimes tells you to do less | Muse Spark |
 | A voice brain dump (capture page) | Transcribes, splits the ramble into separate quests, proposes them | Muse Voice Transcribe + Muse Spark |
 | A photo of a notebook page or whiteboard | Reads it, turns it into proposed quests | Muse Spark (vision) |
-| `--provider open` | The same loop on Meta's open-weight Muse Spark Open, via Baseten or Modal | Muse Spark Open |
+| `--provider open` | The same loop on Meta's open-weight Muse Glimmer, via Ollama, vLLM or a hosted endpoint | Muse Glimmer |
 
 **It decides, within your rules.** The coach is a tool-calling loop (`coach.py`): read tools to look, one decision tool per move the server allows, a budget of six calls. Your standing rules (`irysquest rules "never park the pilot script"`) go in its system prompt, and hard guardrails sit outside the model: it can't park a quest you refused to park, and it won't ask the same question twice.
 
@@ -78,7 +78,7 @@ Open the capture page from your phone on the same Wi-Fi. For voice, run `irysque
 `/?try=<token>` is a visitor mode: friends see what the agent would propose for their own words; nothing is sent.
 
 Open-weight mode: set `MUSE_PROVIDER=open` and `OPEN_BASE_URL`/`OPEN_API_KEY` to any OpenAI-compatible host
-serving `muse-spark-open-1026` (Baseten, Modal, or a local server), or pass `--provider open` per command.
+serving `muse-glimmer` (Ollama, vLLM, or a hosted endpoint), or pass `--provider open` per command.
 Running it locally with Ollama or vLLM: [docs/OPEN_WEIGHT.md](docs/OPEN_WEIGHT.md).
 
 Tests run without a NextQuest server, against a small fake in `tests/`:

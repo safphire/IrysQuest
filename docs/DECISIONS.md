@@ -28,7 +28,7 @@
 - **D-12 (28 Oct)** `serve` is `http.server`, not a framework: one file, no dependencies, and Streamlit-style
   apps are on the organisers' overdone list. Try-it mode is a token in the URL and previews only.
 - **D-13 (28 Oct)** Open-weight mode swaps the chat base URL and model only; transcription stays on the Model
-  API because Muse Spark Open doesn't do ASR.
+  API because the open-weight model (Muse Glimmer) doesn't do ASR.
 - **D-14 (30 Oct)** The breakdown call became the coach: a tool-calling loop where Muse Spark can look (get_quest,
   get_history, list_decisions) and must end with one decision call (shrink_step, add_subquest, park_quest,
   ask_why, leave_alone). Budget six turns. `tool_choice` is "auto" because the Model API accepts nothing else, so a
