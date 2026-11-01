@@ -54,8 +54,17 @@ One composition, `Burial`, 34 s, 1920×1080, 30 fps.
 
 Board for the demo, seeded Sunday night so it's a day old by Monday:
 `python scripts/seed_demo.py` (three mock quests, accept + track in the app), plus the real *Learn to sing* and
-*Pilot script*. Keep *Kurzgesagt* for the reckoning beat. Set `STALL_DAYS=1` in `.env` for the day so the
-morning dig has something to do without `--days 0`.
+*Pilot script*. Keep *Kurzgesagt* for the reckoning beat.
+
+Sunday night, or the 08:00 run finds nothing (the 1 Nov scheduled run proved the scheduler and found 0 stalled,
+because nothing was three days old):
+- `STALL_DAYS=0` in `.env` for the demo days: every tracked quest goes to the coach each morning. Back to 3 after.
+- Write *Kurzgesagt*'s Why in the app, or reject its pending why-question; while it's unanswered the agent
+  deliberately leaves that quest alone.
+- In `.irysquest/context.json`, set Valorant's `asked_for_why` to `false` (a stale flag from a dry run before
+  `830c78f`).
+- Restart `irysquest serve --https` and don't touch the tracked quests before 08:00. If launching from a script,
+  pass the command with `-EncodedCommand`: `Start-Process` strips the inner quotes and runs the wrong thing.
 
 1. **08:00, the real scheduled run.** Have the console window recording (OBS, window capture, 1080p) from
    07:58. Phone screen-recording running too. This gives beat 0:34–1:15 unscripted. If it fires but the
