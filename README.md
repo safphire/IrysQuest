@@ -190,7 +190,7 @@ pip install -e ".[dev]" && pytest
 - [x] The weekly reckoning: one cross-quest verdict (park / focus / fine), Sundays
 - [x] `irysquest serve`: morning schedule, Dig now, agent console
 - [x] Capture page: voice (Muse Voice Transcribe), notebook photo (Muse Spark vision), typed; try-it mode
-- [x] Open-weight mode: implemented against the Ollama/vLLM OpenAI-compatible API, unverified on real Muse Glimmer
+- [x] Open-weight mode: implemented against the Ollama/vLLM OpenAI-compatible API; verification on real Muse Glimmer is on standby (no local disk for the weights during the event)
 - [ ] Verified on a real phone end to end (in progress)
 
 ## What's next
@@ -199,7 +199,7 @@ pip install -e ".[dev]" && pytest
   each time one is done (NextQuest already models practices; the agent needs `propose_add_practice` and a
   *next slice* move).
 - **A "coach left you something" notification** on the phone, which needs an app-side change and so waited.
-- **Open-weight mode verified** on real Muse Glimmer (implemented, offline-tested).
+- **Open-weight mode verified** on real Muse Glimmer (implemented, offline-tested; on standby until the weights can be hosted).
 - **Obstacle and plan** fields (mental contrasting) read by the coach once the app exposes them over MCP.
 
 ## License

@@ -59,3 +59,6 @@
   between what NextQuest claims and what the agent does.
 - **D-20 (1 Nov)** Series/practice quests are deferred to after the hackathon (README "What's next"): they need the
   server's practice kind over MCP and a *next slice* move, half a day that the demo needed more.
+- **D-21 (1 Nov)** Open-weight verification is on standby, not dropped. The code path is tested against a fake
+  OpenAI-compatible endpoint (`tests/test_open_provider.py`); running it on real Muse Glimmer needs the weights on
+  disk or a hosted endpoint, neither of which fits the remaining days. README says so plainly rather than claiming it.
