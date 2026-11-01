@@ -53,6 +53,7 @@ def test_refresh_failure_says_expired_only_for_invalid_grant(tmp_path, status, b
 
     class Token(BaseHTTPRequestHandler):
         def do_POST(self):  # noqa: N802
+            self.rfile.read(int(self.headers.get("Content-Length", 0)))   # drain, or Windows may reset the socket
             self.send_response(status)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()

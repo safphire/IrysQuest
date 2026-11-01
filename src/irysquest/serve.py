@@ -40,7 +40,7 @@ PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name=
 main{max-width:560px;margin:0 auto;padding:20px 16px 48px}h1{font-size:28px;margin:8px 0 2px}.sub{color:var(--mute);margin:0 0 20px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:12px 0}
 h2{font-size:17px;margin:0 0 8px}p{margin:6px 0}button{font:600 15px system-ui;min-height:46px;padding:10px 16px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
-button.primary{background:var(--lime);border-color:var(--lime)}button.rec{background:#ffe3e3;border-color:#ffb3b3}button:disabled{opacity:.5}
+button.primary{background:var(--lime);border-color:var(--lime)}label.btn{display:inline-block;font:600 15px system-ui;min-height:46px;line-height:26px;padding:10px 16px;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:pointer}button.rec{background:#ffe3e3;border-color:#ffb3b3}button:disabled{opacity:.5}
 textarea{width:100%;min-height:90px;padding:10px;border-radius:12px;border:1px solid var(--line);font:15px system-ui}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.pill{font-size:12px;color:var(--violet);border:1px solid var(--violet);border-radius:999px;padding:2px 10px}
 #log{font:13px/1.45 ui-monospace,Menlo,monospace;background:#102418;color:#d9f5c1;border-radius:12px;padding:12px;max-height:260px;overflow:auto;white-space:pre-wrap}
@@ -53,7 +53,8 @@ ul.q{padding-left:18px}ul.q li{margin:6px 0}small{color:var(--mute)}.res{border-
 <div class="row"><button id="rec">● Record</button><button id="stop" disabled>■ Stop &amp; send</button><span id="recstate"><small>idle</small></span></div></div>
 
 <div class="card"><h2>Snap it</h2><p><small>A photo of a notebook page, a whiteboard, a sticky-note wall.</small></p>
-<div class="row"><input id="photo" type="file" accept="image/*"><button id="sendphoto" class="primary">Read it</button></div></div>
+<div class="row"><label class="btn">Take a photo<input id="camera" type="file" accept="image/*" capture="environment" hidden></label><label class="btn">Choose from gallery<input id="photo" type="file" accept="image/*" hidden></label></div>
+<div class="row"><span id="photoname"><small>no photo yet</small></span><button id="sendphoto" class="primary" disabled>Read it</button></div></div>
 
 <div class="card"><h2>Type it</h2><textarea id="dump" placeholder="e.g. need to finally finish the pilot script, also mom's birthday, learn to sing properly, fix the bike…"></textarea>
 <div class="row"><button id="senddump" class="primary">Turn into quests</button></div></div>
@@ -107,7 +108,8 @@ document.getElementById('rec').onclick=async()=>{if(!window.isSecureContext||!na
  const j=await api('/voice',{method:'POST',headers:Object.assign({'Content-Type':'audio/wav'},H),body:wav});show(j);document.getElementById('recstate').innerHTML='<small>idle</small>';refreshLog()};
  mr.start();document.getElementById('rec').classList.add('rec');document.getElementById('rec').disabled=true;document.getElementById('stop').disabled=false;document.getElementById('recstate').innerHTML='<small>recording…</small>'};
 document.getElementById('stop').onclick=()=>{mr.stop();document.getElementById('rec').classList.remove('rec');document.getElementById('rec').disabled=false;document.getElementById('stop').disabled=true};
-document.getElementById('sendphoto').onclick=async()=>{const f=document.getElementById('photo').files[0];if(!f)return;busy('reading…');
+let photoFile=null;for(const id of ['camera','photo'])document.getElementById(id).onchange=e=>{photoFile=e.target.files[0]||null;document.getElementById('photoname').innerHTML='<small>'+(photoFile?esc(photoFile.name||'photo')+' ('+Math.round(photoFile.size/1024)+' KB)':'no photo yet')+'</small>';document.getElementById('sendphoto').disabled=!photoFile};
+document.getElementById('sendphoto').onclick=async()=>{const f=photoFile;if(!f)return;busy('reading…');
  const j=await api('/photo',{method:'POST',headers:Object.assign({'Content-Type':f.type||'image/jpeg'},H),body:f});show(j);refreshLog()};
 document.getElementById('senddump').onclick=async()=>{const t=document.getElementById('dump').value.trim();if(!t)return;busy('thinking…');
  const j=await api('/text',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({text:t})});show(j);refreshLog()};
