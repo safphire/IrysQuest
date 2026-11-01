@@ -244,3 +244,75 @@ API. Commits under test: `4ffb274`, `986f50a`, `0b2f948`. Dry runs only; nothing
 - 1 Nov · FINDING — The console pane shows the internal marker "reckoning:fine:" (from
   `ctx.remember(f"reckoning:{v.verdict}:{title}", "reckoning")`). Cosmetic; filter kind "reckoning" out of `/log`
   or word it for people.
+
+## 1 Nov (late): the scheduled dig fires on its own
+
+Run on Sun 1 Nov 2026, 17:40–17:50, Windows 11, `dd8a3a3`, real NextQuest server (ngrok) and real Meta Model API.
+Only the scheduled run was allowed to propose; it proposed nothing (see 7b). Tally: 11 PASS, 0 FAIL, 5 FINDING.
+
+**Setup**
+- 1 Nov · 1 PASS — Stopped the "IrysQuest serve" console (cmd, irysquest, tee, 2× python); nothing listened on 8787.
+- 1 Nov · 2 PASS — `git pull` → `dd8a3a3` (includes `830c78f`); `pip install -e ".[dev]"` with serve stopped;
+  `pytest -q` → **30 passed**.
+- 1 Nov · 3 PASS — `/health` → `{"ok":true,"name":"NextQuest"}`. Before: 4/5 slots — Kurzgesagt-technique learning
+  animations (touched 31 Oct 17:46), Check out YouTube videos on Valorant, Learn to sing: one song by December,
+  Finish the pilot script for Scriptory (all three 1 Nov 15:02).
+- 1 Nov · 4 PASS — Pending before: **1** ("Read the book 'Lean startup' from page 180", not from the agent).
+
+**A. Fire the schedule**
+- 1 Nov · 5 FINDING — The suggested `Start-Process powershell -ArgumentList '-NoExit','-Command','…'` line does not
+  survive Windows argument quoting: the inner double quotes are dropped, so the new shell parsed
+  `$Host.UI.RawUI.WindowTitle=IrysQuest serve;`, which *runs* `irysquest serve` (the global Python's editable
+  install, before activation, no `--https`, output captured into the title) and blocks; the `cd`, activate,
+  `DIG_AT` and `Tee-Object` never ran. That process served plain http on the default 08:00 schedule. Stopped it
+  and relaunched the identical commands with `-EncodedCommand` (base64 UTF-16LE), which keeps the quoting.
+- 1 Nov · 6 PASS — `DIG_AT=17:49` for that window only. Startup line within 10 s: "[17:45:52] Next scheduled dig at
+  Sun 17:49." Process: `.venv\Scripts\irysquest.exe serve --https`.
+- 1 Nov · 7 PASS — Fired on its own at 17:48:59 (the timer wakes up to a second early), ran a real dig, then the
+  Sunday reckoning ("Board:" line and a **fine** verdict), then re-armed: "Next scheduled dig at Mon 17:49." No
+  banned words (overdue, failed, missed, lazy, behind, again, streak; whole words, case-insensitive) in any line.
+  `.irysquest\serve.log`, verbatim (Windows PowerShell's `Tee-Object` garbles "→" into "ΓåÆ"; `/log` has the arrow):
+
+  ```
+  [17:48:59] Morning. Checking what's buried.
+  [17:48:59] Reading your tracked quests.
+  [17:49:00] 4/5 slots used; 0 stalled for 3+ days.
+  [17:49:00] Nothing is buried. See you tomorrow.
+  [17:49:00] Weekly reckoning: looking at the whole board, not one quest.
+  [17:49:09]   Board: Everything on the board feels fresh and in motion this week.
+  [17:49:09]   ΓåÆ the board is fine. All four quests have moved in the last day, so there's nothing to put aside.
+  [17:49:09] Next scheduled dig at Mon 17:49.
+  ```
+- 1 Nov · 7b FINDING — The scheduled dig uses `STALL_DAYS` from `.env` (3), not `--days 0`, and every quest was
+  touched 0–1 days ago, so **the coach handled no quest**: no "Looked at:" lines, moves, steps or cues to record.
+  The schedule, the dig, the reckoning and the re-arm are proven; the coach acting *on the schedule* is not yet.
+  Monday 08:00 will also find nothing stalled unless a quest is 3+ days old by then (Kurzgesagt reaches 3 days on
+  Tue 3 Nov 17:46).
+- 1 Nov · 8 PASS — Pending after: **1** (the same Lean Startup proposal). New = 1 − 1 = **0**, matching **0**
+  "Proposed." lines in the log. Verdict was fine, so no park proposal.
+- 1 Nov · 9 PASS — `curl --cacert .irysquest\tls\cert.pem https://localhost:8787/log` shows the same seven lines from
+  "Morning. Checking what's buried." to "→ the board is fine. …". This run wrote no `reckoning:` marker.
+- 1 Nov · 9b FINDING — `/log` still holds one bare marker from before `830c78f`: `2026-11-01T16:55:59`,
+  kind `reckoning`, text "reckoning:fine:". The fix stopped writing it but didn't filter old entries; it ages out
+  of the 200-line log.
+- 1 Nov · 10 PASS — No quest was proposed for, and all four quests' fields are unchanged from before the run:
+  Kurzgesagt `last_proposed_at: 2026-10-30T21:23:36`, `asked_for_why: true`, `last_move: ask_why`; Valorant
+  `last_proposed_at: (empty)`, `asked_for_why: true`; Learn to sing and Pilot script `last_proposed_at: (empty)`,
+  `asked_for_why: false`.
+- 1 Nov · 10b FINDING — Valorant's `asked_for_why: true` is stale: an earlier dry run wrote it, before `830c78f`
+  stopped dry runs leaving traces, and no why-question was ever proposed. The fix doesn't repair existing memory,
+  so the coach still can't ask Valorant's why. Clearing that one flag in `context.json` (by hand or a one-off
+  reconcile) would undo it.
+
+**B. Restore**
+- 1 Nov · 11 PASS — Stopped the 17:49 window; relaunched the same way without `DIG_AT` (same title, same tee):
+  "[17:49:50] Next scheduled dig at Mon 08:00." Left running (`.venv\Scripts\irysquest.exe serve --https`), `/health`
+  OK.
+- 1 Nov · 12 PASS — `git status` clean before this entry; `git check-ignore -v .irysquest/serve.log` →
+  `.gitignore:2:.irysquest/`. NextQuest checkout untouched.
+
+**Also found**
+- 1 Nov · FINDING — With `2>&1 | Tee-Object` in Windows PowerShell 5.1, serve's first stderr line is wrapped in a
+  `NativeCommandError` block ("irysquest : [17:45:52] … At line:1 char:122 … RemoteException") and non-ASCII is
+  garbled ("ΓåÆ"). Cosmetic, and only in the tee'd file; the restart's `Tee-Object` also overwrites `serve.log`
+  (the 17:49 log was copied aside first). Running serve without piping, or from `pwsh` 7, avoids both.
