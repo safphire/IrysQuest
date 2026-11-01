@@ -77,6 +77,12 @@ class Agent:
         for s in stalls:
             notes = self.ctx.notes(s.quest_id, s.title)
             res = DigResult(quest_id=s.quest_id, title=s.title, days=s.days)
+            if s.current_step == WHY_STEP and not s.why:
+                # Our own question is the step and it's still unanswered: replacing it would mean never getting the why.
+                self._say(f'"{s.title}": still waiting for its why (the step asks what done looks like). Leaving it alone.')
+                res.move, res.outcome = "leave_alone", "left-alone"
+                results.append(res)
+                continue
             self._say(f'"{s.title}" untouched {s.days} days (step: {s.current_step or "none"}). Handing it to the coach.')
             rejected = sorted(set(s.rejected + notes.rejected))
             summary = {

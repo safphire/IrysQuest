@@ -167,3 +167,22 @@ def test_try_it_visitor_words_stay_out_of_the_log(world):
         assert any("fix the bike" in l["text"] for l in ctx_store.load(cf).log) and len(fake_server.PROPOSALS) == 1
     finally:
         srv.shutdown()
+
+
+def test_unanswered_why_question_is_left_alone(world):
+    client, cf = world
+    q1 = fake_server.QUESTS[0]
+    saved = dict(q1)
+    q1["next_step"], q1["why"] = {"id": "s9", "text": WHY_STEP}, None
+    try:
+        muse = ScriptedMuse([])   # any call to the coach would fail: nothing scripted
+        res = Agent(client, muse, cf, stall_days=3).dig()
+        assert [(r.move, r.outcome) for r in res] == [("leave_alone", "left-alone")]
+        assert muse.calls == [] and fake_server.PROPOSALS == []
+        # once the why is written, the quest goes back to the coach
+        q1["why"] = "Sing at the family get-together"
+        muse = ScriptedMuse([{"role": "assistant", "content": None, "tool_calls": [call("shrink_step", step="Hum one scale", minutes=3, reason="r", assumption="a")]}])
+        assert Agent(client, muse, cf, stall_days=3).dig()[0].outcome == "proposed"
+    finally:
+        q1.clear()
+        q1.update(saved)
