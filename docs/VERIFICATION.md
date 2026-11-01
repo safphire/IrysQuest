@@ -57,3 +57,66 @@ Pending proposals: the `ask_why` step on the Kurzgesagt quest, the four captured
 - The `\u2192` arrow under redirection stays as is.
 - Seen in passing: when the server is unreachable, a failed token refresh says "Session expired … run
   `irysquest login`" even though the tokens are fine (here ngrok's 404, ERR_NGROK_3200).
+
+## 1 Nov 2026 — reckoning, demo board, voice from a real phone, try-it, open-weight tests
+
+Starting point: `9b00e75` (the weekly reckoning). 15 tests passed after `pip install -e ".[dev]"`; 21 at the end.
+
+### Weekly reckoning and the demo board
+
+- `irysquest reckon --dry-run` with 1 tracked quest: **fine**, "Only one quest is tracked; nothing can crowd it
+  out." That path returns before calling Muse and doesn't print its board_read ("A quiet board.").
+- `scripts/seed_demo.py` proposed three quests (pilot script, bike brake, one song by December) with
+  `track=False`; the user accepted two, rejected the bike brake, and also accepted the Valorant quest from the voice
+  test below, then tracked all of them: 4/5 slots.
+- `irysquest reckon --dry-run` with 4 tracked quests: Muse was called; **fine**, board_read "This week feels
+  fresh and open with room to keep exploring." Reason: all four were touched recently.
+- `irysquest dig --dry-run --days 0`: the coach called `get_quest`, `get_history` and `list_decisions` for every
+  quest before deciding. Three `shrink_step`s at 5 minutes, each with an assumption that matches the quest's why
+  (e.g. "to have a finished pilot you can send to people"); for the Valorant quest, which has no why, it chose
+  `ask_why`. Nothing proposed.
+- **Limitation of mock data:** the server stamps `touched_at` itself, so the agent can't backdate a seeded quest.
+  Every seeded quest is 0 days old, `dig` needs `--days 0` to see anything, and the reckoning can only say "fine"
+  until real days pass. A park verdict on a demo board needs a week or two of real use.
+
+### Voice from a real phone (Android, same LAN)
+
+- Plain `http://192.168.0.53:8787/`: tapping Record did nothing, no permission prompt. `getUserMedia` exists only
+  in a secure context, which a LAN IP over http is not, and the page threw an uncaught TypeError.
+- Fixed by `baf57c7` (`serve --https`, self-signed certificate via openssl, D-18) and `b43f633` (the page says
+  why recording can't start). Python's `cryptography` is not installed; Git for Windows' openssl was on PATH.
+- Over `https://192.168.0.53:8787/`, after accepting the certificate warning once: 275 KB of WAV from the phone,
+  transcribed as "I would like to check out YouTube videos on Valorant.", one quest, one pending `add_quest`
+  proposal on the server. **Voice capture now works end to end on a real phone.**
+- `0e33635`: the phone retries while it refuses the certificate, and plain http to the https port fails the
+  handshake. One session left 369 tracebacks (~600 KB) in the console; these are now dropped quietly.
+
+### Try-it mode
+
+`TRY_IT_TOKEN` set in `.env` (12 random alphanumerics), `serve --https` restarted, checked with curl:
+
+- visitor `POST /text?try=…`: 200, both quests `"outcome": "preview"`;
+- visitor `POST /dig?try=…` and `POST /dig?dry=1&try=…`: 403 "Visitors can only preview captures.";
+- visitor `GET /log?try=…`: empty log, no profile or rules;
+- pending proposals on the server unchanged.
+
+### Open-weight mode
+
+Not run on real weights; no model was pulled. `tests/test_open_provider.py` runs `Muse.chat`,
+`Muse.chat_tools` and `Coach.decide` against a local fake of the OpenAI-compatible `/v1/chat/completions` (as
+Ollama and vLLM expose it), including a `tool_calls` reply fed back as a `tool` message and a 404 "model not
+found". How to run it for real: `docs/OPEN_WEIGHT.md`.
+
+### Needs a decision
+
+- The try-it banner says "Nothing is saved or sent anywhere", but a visitor's words go to the Meta API and their
+  previewed quests are written to the owner's console log in `context.json`. Reword the banner, or keep visitor
+  captures out of the log.
+- Without `?try=`, anyone who can reach the page has owner access (Dig now, profile, rules). Fine on a home LAN;
+  worth knowing before sharing the address more widely.
+- The README calls the open model "Muse Spark Open" (`muse-spark-open-1026`); the new docs say Muse Glimmer.
+
+### Left on the server from this run
+
+Nothing pending. Four tracked quests: the Kurzgesagt quest, Valorant (voice test), the pilot script and one song
+by December (both demo data). The bike-brake demo proposal was rejected.
