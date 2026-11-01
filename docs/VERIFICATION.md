@@ -171,3 +171,76 @@ Starting point: `f527cc2`. 27 tests at the end (21 before), all passing.
 `irysquest serve --https` was restarted at 15:43 as a detached process (console in
 `%TEMP%\irysquest-serve.err.log`) so the scheduled dig fires on Mon 2 Nov at 08:00. Not yet observed: check for
 "Morning. Checking what's buried." in that file or on the page's console.
+
+## 1 Nov (evening): research layer, Sunday reckoning, photo input
+
+Run on Sun 1 Nov 2026, 16:50–17:00, Windows 11, against the real NextQuest server (ngrok) and the real Meta Model
+API. Commits under test: `4ffb274`, `986f50a`, `0b2f948`. Dry runs only; nothing was proposed. Tally: 10 PASS,
+0 FAIL, 5 FINDING.
+
+**Setup**
+- 1 Nov · 1 PASS — `git pull` fast-forwarded to `0b2f948`; `git status` clean.
+- 1 Nov · 2 FINDING — `pip install -e ".[dev]"` failed with "[WinError 5] Access is denied:
+  …\.venv\scripts\irysquest.exe" because the running serve held the exe; the half-done install left `irysquest`
+  unimportable (pytest: 5 errors). After stopping serve, reinstall OK and **29 passed**. pip now warns "Ignoring
+  invalid distribution ~rysquest" (leftover folder in site-packages, harmless). Stop serve before reinstalling.
+- 1 Nov · 3 PASS — `curl http://localhost:8080/health` → `{"ok":true,"name":"NextQuest"}` (200); `irysquest today`
+  → 4/5 slots, Kurzgesagt, Valorant, Learn to sing, Pilot script. The old serve (3 processes) was stopped.
+
+**A. Research layer (`986f50a`)**
+- 1 Nov · 4 PASS — `dig --dry-run --days 0`. Kurzgesagt: not handed to the coach ("still waiting for its why …
+  Leaving it alone", the `ed599f9` guard). The other three: "Looked at: get_quest, get_history, list_decisions."
+  - Valorant → leave_alone: "Assuming it's for a fun break exploring Valorant, this one is brand new from today
+    with a clear first move, so giving it space to get started."
+  - Learn to sing → leave_alone: "This one is fresh from today, to sing confidently for family in December, and
+    picking the song and playing it once is already a kind first start, so I'll let you enjoy it."
+  - Pilot script → shrink_step: "Copy your favourite line from the last scene by hand and add the next 2 lines on
+    paper (at 9:30, at the desk as build block starts)" (5 min); reason: "Paper is an easy way in, and a few minutes
+    of writing keeps the pilot alive and moving toward sendable." **Cue present on 1 of 1 shrink_step.**
+  - Banned words (overdue, failed, missed, lazy, behind, again; case-insensitive, whole words): no hits. "streak":
+    no hits.
+- 1 Nov · 5 PASS — `last_proposed_at` in `context.json` unchanged by the dry run for all four quests (three empty,
+  Kurzgesagt `2026-10-30T21:23:36`). The `inspect` check printed `True True`.
+- 1 Nov · 6a PASS — `_days_since_any_activity` defined at `agent.py:203`, called at `agent.py:78`
+  (`away_days = …`), passed to the coach at `agent.py:97` as `"days_since_user_did_anything": away_days`
+  (`is_monday` at line 98).
+- 1 Nov · 6b FINDING — second `dig --dry-run --days 0`: no "You've been away" line (the user was active today,
+  so away_days < 2) and the forgiveness path wasn't exercised. Tone is gentle but not a welcome-back, e.g. Learn to
+  sing: "This one is brand new today to sing confidently for family in December, so leaving it fresh for you to pick
+  the song in your own time." The Pilot script went from shrink_step (run 1) to leave_alone (run 2). No banned words
+  or "streak" in run 2. Testing forgiveness live needs a quest log with a gap of 2+ days.
+
+**B. Weekly reckoning on a Sunday (D-17)**
+- 1 Nov · 7 PASS — `reckon --dry-run`: board read "The board looks alive with a little movement everywhere this
+  week."; verdict **fine**, no quest named; reason "All four quests were touched recently and there's still an open
+  slot, so nothing is in the way." No banned words.
+
+**C. Photo input (`4ffb274`)**
+- 1 Nov · 8 PASS — `serve --https` started in its own console window ("IrysQuest serve"). The desktop app's
+  built-in browser refuses the self-signed certificate (ERR_CERT_AUTHORITY_INVALID) and can't proceed past it, so
+  the page source was fetched with `curl --cacert .irysquest/tls/cert.pem https://localhost:8787/` (verified TLS,
+  200). Tag: `<input id="photo" type="file" accept="image/*">`, no `capture` attribute.
+- 1 Nov · 9 PASS — `/log` (what the page's console pane shows) returned 60 lines; last three:
+  "Board: The board looks alive with a little movement everywhere this week." / "→ the board is fine. All four quests
+  were touched recently and there's still an open slot, so nothing is in the way." / "reckoning:fine:".
+
+**D. Scheduler readiness**
+- 1 Nov · 10 FINDING — startup line: "[16:56:17] Next scheduled dig at Mon 08:00." `.env` has **no** `DIG_AT=`
+  line; the default in `config.py:70` (`"08:00"`) applies, so the schedule is right but not pinned in `.env`.
+  Serve left running for Monday.
+
+**E. Hygiene**
+- 1 Nov · 11 PASS — `git log --oneline -3`: `0b2f948`, `986f50a`, `4ffb274`; `git status` clean before this entry.
+- 1 Nov · 12 PASS — `git check-ignore -v` lists all three: `.env` (rule `.env`), `.irysquest/tokens.json` and
+  `.irysquest/tls/cert.pem` (rule `.irysquest/`). There is no `*.pem` rule; the certificate is covered by
+  `.irysquest/`.
+
+**Also found**
+- 1 Nov · FINDING — **Dry runs write to `context.json`.** Valorant has `asked_for_why: true` but no
+  `last_proposed_at`. That flag came from the 15:03 dry run (coach chose ask_why), so run 2 overrode the coach with
+  "I've already asked what this is for; I'll wait for the why." The quest can't get its why-question though none
+  was ever proposed. In `dig`, `asked_for_why` and the assumption/intent notes are set before the `if dry_run:`
+  check (`agent.py:158`) and saved at the end. Smallest fix: set them only after a proposal succeeds.
+- 1 Nov · FINDING — The console pane shows the internal marker "reckoning:fine:" (from
+  `ctx.remember(f"reckoning:{v.verdict}:{title}", "reckoning")`). Cosmetic; filter kind "reckoning" out of `/log`
+  or word it for people.
