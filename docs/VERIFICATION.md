@@ -79,7 +79,7 @@ Starting point: `9b00e75` (the weekly reckoning). 15 tests passed after `pip ins
   Every seeded quest is 0 days old, `dig` needs `--days 0` to see anything, and the reckoning can only say "fine"
   until real days pass. A park verdict on a demo board needs a week or two of real use.
 
-### Voice from a real phone (Android, same LAN)
+### Voice from a real phone (Chrome on Android, same LAN; browser confirmed by the user, not logged)
 
 - Plain `http://192.168.0.53:8787/`: tapping Record did nothing, no permission prompt. `getUserMedia` exists only
   in a secure context, which a LAN IP over http is not, and the page threw an uncaught TypeError.
