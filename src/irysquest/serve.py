@@ -53,7 +53,7 @@ ul.q{padding-left:18px}ul.q li{margin:6px 0}small{color:var(--mute)}
 <div class="row"><button id="rec">● Record</button><button id="stop" disabled>■ Stop &amp; send</button><span id="recstate"><small>idle</small></span></div></div>
 
 <div class="card"><h2>Snap it</h2><p><small>A photo of a notebook page, a whiteboard, a sticky-note wall.</small></p>
-<div class="row"><input id="photo" type="file" accept="image/*" capture="environment"><button id="sendphoto" class="primary">Read it</button></div></div>
+<div class="row"><input id="photo" type="file" accept="image/*"><button id="sendphoto" class="primary">Read it</button></div></div>
 
 <div class="card"><h2>Type it</h2><textarea id="dump" placeholder="e.g. need to finally finish the pilot script, also mom's birthday, learn to sing properly, fix the bike…"></textarea>
 <div class="row"><button id="senddump" class="primary">Turn into quests</button></div></div>
