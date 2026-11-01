@@ -250,7 +250,8 @@ class Agent:
             })
         if len(board) < 2:
             v = Verdict("fine", reason="Only one quest is tracked; nothing can crowd it out.", board_read="A quiet board.")
-            self._say(f"  {v.reason}")
+            self._say(f"  Board: {v.board_read}")
+            self._say(f"  → the board is fine. {v.reason}")
             self._save()
             return v
         try:
