@@ -39,3 +39,41 @@ def test_proposals_never_mutate(client):
 def test_tool_errors_surface(client):
     with pytest.raises(ToolError):
         client.get_quest("nope")
+
+
+@pytest.mark.parametrize("status, body, says", [
+    (400, b'{"error": "invalid_grant"}', "Session expired"),
+    (404, b"<html>ERR_NGROK_3200</html>", "Server unreachable (404)"),
+    (502, b'{"error": "bad_gateway"}', "Server unreachable (502)"),
+    (None, b"", "Server unreachable (ConnectError)"),
+])
+def test_refresh_failure_says_expired_only_for_invalid_grant(tmp_path, status, body, says):
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    class Token(BaseHTTPRequestHandler):
+        def do_POST(self):  # noqa: N802
+            self.send_response(status)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *a):
+            pass
+
+    srv = HTTPServer(("127.0.0.1", 0), Token)
+    url = f"http://127.0.0.1:{srv.server_address[1]}/oauth/token"
+    if status is None:
+        srv.server_close()          # nothing listening: connection refused
+    else:
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+    tf = tmp_path / "tokens.json"
+    tokens = oauth.Tokens("c", url, "a", "r", time.time() - 1)
+    oauth.save_tokens(tf, tokens)
+    try:
+        with pytest.raises(SystemExit, match=says.replace("(", r"\(").replace(")", r"\)")):
+            oauth.refresh(tokens, tf)
+    finally:
+        if status is not None:
+            srv.shutdown()
+    assert oauth.load_tokens(tf).refresh_token == "r"   # nothing lost

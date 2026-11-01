@@ -174,13 +174,24 @@ def login(mcp_url: str, token_file: Path, open_browser: bool = True) -> Tokens:
 
 def refresh(tokens: Tokens, token_file: Path) -> Tokens:
     """Rotates the refresh token. The server invalidates the old one, so save at once."""
-    with httpx.Client(timeout=20, headers=_H) as c:
-        r = c.post(
-            tokens.token_endpoint,
-            data={"grant_type": "refresh_token", "refresh_token": tokens.refresh_token, "client_id": tokens.client_id},
-        )
+    unreachable = "Server unreachable ({}): couldn't refresh the session. Your sign-in is kept; try again once the server (or its tunnel) is up."
+    try:
+        with httpx.Client(timeout=20, headers=_H) as c:
+            r = c.post(
+                tokens.token_endpoint,
+                data={"grant_type": "refresh_token", "refresh_token": tokens.refresh_token, "client_id": tokens.client_id},
+            )
+    except httpx.TransportError as e:
+        raise SystemExit(unreachable.format(type(e).__name__)) from e
     if r.status_code >= 400:
-        raise SystemExit(f"Session expired ({r.status_code}). Run `irysquest login` again.")
+        # Only the server saying the refresh token is no good means signing in again; a tunnel's 404 or a 502 doesn't.
+        try:
+            error = r.json().get("error")
+        except ValueError:
+            error = None
+        if r.status_code in (400, 401) and error == "invalid_grant":
+            raise SystemExit("Session expired. Run `irysquest login` again.")
+        raise SystemExit(unreachable.format(r.status_code))
     j = r.json()
     new = Tokens(
         client_id=tokens.client_id,
