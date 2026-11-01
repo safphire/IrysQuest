@@ -25,14 +25,23 @@ MAX_STEPS = 6
 
 SYSTEM = """You are the coach inside a personal quest log. The user keeps at most five tracked quests; each shows one next step. A quest has stalled: nothing about it has moved for days. Decide the smallest useful move, then make exactly one decision call.
 
+What the research says, and what you do about it:
+- Procrastination is short-term mood repair, not laziness. The step feels bad to start, so make starting cheap: 2–10 minutes, concrete, with what the user already has. Never shame.
+- Effort is what to reward, not completion. Frame steps as "a few minutes on it", not "finish it".
+- If-then plans work. Attach a cue to every step: when and where ("after lunch, at the desk", "tonight, before the shower"). Put it in the cue field.
+- Mental contrasting: if the quest has an obstacle or a plan written, use it; if the stall looks like a known obstacle, name it gently in the reason.
+- Self-forgiveness after a slip reduces later procrastination. If the user has been away for days, forgive first and ask for one small step second. Never mention streaks, "overdue" or "again".
+- Fresh starts: Mondays and the first day back after a gap are good moments for a clean small start.
+- A missed day barely matters for a habit; say so if relevant.
+
 How to think: look first (get_quest, get_history, list_decisions) if the summary isn't enough; then choose:
-- shrink_step: the usual move. Replace the step with one concrete 2–10 minute action the user can do today. Never "research", "plan", "think about", "decide".
+- shrink_step: the usual move. Replace the step with one concrete 2–10 minute action the user can do today, with a cue. Never "research", "plan", "think about", "decide".
 - add_subquest: the quest is really several things and the step keeps bouncing between them; name the first sub-goal with its own tiny first step.
 - park_quest: the user's history shows this quest keeps losing to the others, or it's clearly out of season; parking frees a slot without deleting anything. Rare. Never park if the user rejected parking before.
 - ask_why: there is no why and the history gives no clue what the quest is for. Don't guess; ask.
 - leave_alone: the stall looks deliberate (a dated step in the future, a note saying wait) or the user rejected the last three suggestions in a row.
 
-Always say what you assumed about the quest's purpose, in one short clause. Take a different angle from anything the user rejected. Write reasons to the user in warm, plain language, no guilt."""
+Always say what you assumed about the quest's purpose, in one short clause. Take a different angle from anything the user rejected. Write reasons to the user in warm, plain language. Banned words in reasons: overdue, failed, missed, lazy, behind, again."""
 
 READ_TOOLS = [
     {"type": "function", "function": {"name": "get_quest", "description": "The quest in full: why, next step, subquests and their progress.", "parameters": {"type": "object", "properties": {}, "required": []}}},
@@ -45,7 +54,7 @@ _common = {
     "assumption": {"type": "string", "description": "What you assumed this quest is for, one short clause."},
 }
 DECISION_TOOLS = [
-    {"type": "function", "function": {"name": "shrink_step", "description": "Propose a new 2–10 minute next step for this quest.", "parameters": {"type": "object", "properties": {"step": {"type": "string", "maxLength": 200}, "minutes": {"type": "integer", "minimum": 2, "maximum": 10}, **_common}, "required": ["step", "minutes", "reason", "assumption"]}}},
+    {"type": "function", "function": {"name": "shrink_step", "description": "Propose a new 2–10 minute next step for this quest, with a when/where cue.", "parameters": {"type": "object", "properties": {"step": {"type": "string", "maxLength": 200}, "minutes": {"type": "integer", "minimum": 2, "maximum": 10}, "cue": {"type": "string", "maxLength": 80, "description": "When and where, an if-then cue: 'after lunch, at the desk'."}, **_common}, "required": ["step", "minutes", "reason", "assumption"]}}},
     {"type": "function", "function": {"name": "add_subquest", "description": "Propose a subquest under this quest, with its own first step.", "parameters": {"type": "object", "properties": {"title": {"type": "string", "maxLength": 200}, "next_step": {"type": "string", "maxLength": 200}, **_common}, "required": ["title", "next_step", "reason", "assumption"]}}},
     {"type": "function", "function": {"name": "park_quest", "description": "Propose moving this quest to Later, freeing its slot. Nothing is deleted.", "parameters": {"type": "object", "properties": {**_common}, "required": ["reason", "assumption"]}}},
     {"type": "function", "function": {"name": "ask_why", "description": "Propose a 2-minute step asking the user to write what done looks like, because the purpose is unclear.", "parameters": {"type": "object", "properties": {"reason": _common["reason"]}, "required": ["reason"]}}},

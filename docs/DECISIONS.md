@@ -52,3 +52,10 @@
   first time, which is fine for a dev build. Python's `cryptography` would avoid the openssl step but is a new
   dependency, and it isn't installed. Without openssl, tunnel port 8787 instead (`ngrok http 8787`), since ngrok
   gives an https URL. Plain http stays the default: localhost needs nothing more.
+- **D-19 (1 Nov)** The coach's prompt now carries the research the app was built on (mood repair, effort over
+  completion, if-then cues, forgiveness after a gap, fresh starts, no controlling rewards, banned guilt words), and
+  `shrink_step` takes a `cue`. The agent computes days since the user's last activity and tells the coach, so a
+  return after a gap is met with forgiveness and one small step rather than a breakdown. This closes the gap
+  between what NextQuest claims and what the agent does.
+- **D-20 (1 Nov)** Series/practice quests are deferred to after the hackathon (README "What's next"): they need the
+  server's practice kind over MCP and a *next slice* move, half a day that the demo needed more.

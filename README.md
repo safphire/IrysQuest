@@ -20,6 +20,26 @@ back; that's what stuck means.
 IrysQuest is an agent that notices which goals have stalled and brings you the smallest possible next move. You
 decide. It proposes, you approve; it never acts on its own.
 
+## What it believes about procrastination
+
+Procrastination is short-term mood repair, not laziness: the task feels bad to start, so we do something else. That
+one finding decides how the coach behaves, and each behaviour below has research behind it.
+
+| What the coach does | Why |
+|---|---|
+| Proposes steps of 2–10 minutes, never "plan" or "decide" | Lowering the cost of *starting* is the lever; completion takes care of itself |
+| Attaches a when/where cue to each step ("after lunch, at the desk") | If-then plans are among the strongest goal interventions known |
+| Forgives first after a gap, then asks for one small step | Self-forgiveness after procrastinating reduces later procrastination |
+| Treats Mondays and the first day back as clean starts | The fresh-start effect: temporal landmarks motivate new beginnings |
+| Frames XP and streaks as feedback, never payment; no penalties | Controlling rewards erode intrinsic motivation; informational feedback doesn't |
+| Sometimes says *park this* | Attention residue from too many parallel goals kills flow; five slots is the cap, and the coach defends it |
+| Never writes overdue, failed, missed, lazy, behind, again | Guilt is the mood the whole loop is trying to avoid |
+
+Where this sits against the apps people already use: **Fabulous** calibrates you with a long questionnaire and sells a
+programme; the result is thorough, paywalled and heavy. **Goblin Tools** and **Todoist** break a task down when you ask.
+IrysQuest calibrates from what you actually accept and refuse, asks one question only when it has to, comes to you
+before you ask, and is open source. That's the bet: a coach that learns you by watching, not by interviewing.
+
 ## What it does
 
 | Trigger | What the agent does | Meta model |
@@ -172,6 +192,15 @@ pip install -e ".[dev]" && pytest
 - [x] Capture page: voice (Muse Voice Transcribe), notebook photo (Muse Spark vision), typed; try-it mode
 - [x] Open-weight mode: implemented against the Ollama/vLLM OpenAI-compatible API, unverified on real Muse Glimmer
 - [ ] Verified on a real phone end to end (in progress)
+
+## What's next
+
+- **Series quests.** "Read the book from page 180" is a practice, not a step: the coach should propose the next slice
+  each time one is done (NextQuest already models practices; the agent needs `propose_add_practice` and a
+  *next slice* move).
+- **A "coach left you something" notification** on the phone, which needs an app-side change and so waited.
+- **Open-weight mode verified** on real Muse Glimmer (implemented, offline-tested).
+- **Obstacle and plan** fields (mental contrasting) read by the coach once the app exposes them over MCP.
 
 ## License
 

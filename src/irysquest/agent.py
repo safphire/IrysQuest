@@ -34,6 +34,7 @@ class DigResult:
     assumption: str = ""
     proposal_id: str = ""
     move: str = ""      # shrink_step | add_subquest | park_quest | ask_why | leave_alone
+    cue: str = ""       # the if-then cue, when the coach gave one
     outcome: str = ""   # proposed | dry-run | declined | muse-failed | left-alone
 
 
@@ -74,6 +75,9 @@ class Agent:
             return results
 
         history = self._history_by_quest()
+        away_days = self._days_since_any_activity(history)
+        if away_days >= 2:
+            self._say(f"You've been away {away_days} days. That's normal; one gap barely matters. Forgiving first, then one small step.")
         for s in stalls:
             notes = self.ctx.notes(s.quest_id, s.title)
             res = DigResult(quest_id=s.quest_id, title=s.title, days=s.days)
@@ -90,6 +94,8 @@ class Agent:
                 "days_untouched": s.days, "steps_user_rejected": rejected, "your_previous_assumption": notes.assumption,
                 "user_rejected_parking_before": notes.rejected_park, "asked_for_why_before": notes.asked_for_why,
                 "slots": f"{today['slots_used']}/{today['slot_cap']}",
+                "days_since_user_did_anything": away_days,
+                "is_monday": datetime.now().weekday() == 0,
             }
             reads = {
                 "get_quest": lambda a, qid=s.quest_id: self._safe(lambda: self.client.get_quest(qid)),
@@ -132,6 +138,10 @@ class Agent:
             elif d.move == "shrink_step":
                 res.step = str(d.args.get("step", "")).strip()[:200]
                 res.minutes = max(2, min(10, int(d.args.get("minutes", 5) or 5)))
+                cue = str(d.args.get("cue", "")).strip()[:80]
+                if cue:
+                    res.step = f"{res.step} ({cue})"[:200]
+                    res.cue = cue
             elif d.move == "add_subquest":
                 res.step = f"{d.args.get('title', '').strip()[:120]} → {d.args.get('next_step', '').strip()[:120]}"
                 res.minutes = 5
@@ -188,6 +198,21 @@ class Agent:
         rows = [{"op": p.get("op"), "proposed": p.get("after"), "status": p.get("status"), "at": p.get("created_at", "")[:10]}
                 for p in proposals if p.get("quest") == title]
         return {"decisions": rows[-10:]}
+
+    @staticmethod
+    def _days_since_any_activity(history: dict[str, list[str]]) -> int:
+        """Days since the user (not an assistant) did anything on any quest; 0 when unknown."""
+        latest = ""
+        for lines in history.values():
+            for line in lines:
+                if line.endswith("(user)") and line[:10] > latest:
+                    latest = line[:10]
+        if not latest:
+            return 0
+        try:
+            return (datetime.now().date() - datetime.fromisoformat(latest).date()).days
+        except ValueError:
+            return 0
 
     def _history_by_quest(self, days: int = 30) -> dict[str, list[str]]:
         out: dict[str, list[str]] = {}

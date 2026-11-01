@@ -186,3 +186,17 @@ def test_unanswered_why_question_is_left_alone(world):
     finally:
         q1.clear()
         q1.update(saved)
+
+
+def test_cue_is_attached_to_the_step(world):
+    client, cf = world
+    muse = ScriptedMuse([{"role": "assistant", "content": None, "tool_calls": [call("shrink_step", step="Hum one scale", minutes=3, cue="after lunch, at the desk", reason="Tiny start.", assumption="singing")]}])
+    res = Agent(client, muse, cf, stall_days=3).dig()
+    assert res[0].cue == "after lunch, at the desk"
+    assert fake_server.PROPOSALS[-1]["payload"]["text"] == "Hum one scale (after lunch, at the desk)"
+
+
+def test_coach_prompt_carries_the_research_and_no_banned_words():
+    from irysquest.coach import SYSTEM
+    for phrase in ("mood repair", "If-then", "forgive", "Fresh start", "Banned words"):
+        assert phrase in SYSTEM
