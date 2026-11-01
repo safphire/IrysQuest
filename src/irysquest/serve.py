@@ -91,7 +91,8 @@ async function toWav(blob){const ac=new(window.AudioContext||window.webkitAudioC
   for(let i=0;i<pcm.length;i++){const x=Math.max(-1,Math.min(1,pcm[i]));v.setInt16(44+i*2,x<0?x*32768:x*32767,true)}
   return new Blob([v],{type:'audio/wav'})}finally{ac.close()}}
 let mr,chunks=[];
-document.getElementById('rec').onclick=async()=>{const s=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];mr=new MediaRecorder(s);mr.ondataavailable=e=>chunks.push(e.data);
+document.getElementById('rec').onclick=async()=>{if(!window.isSecureContext||!navigator.mediaDevices){show({error:'The microphone only works over HTTPS. Restart with irysquest serve --https and open https://'+location.host+'/'});return}
+ let s;try{s=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){show({error:'Microphone not available: '+((e&&e.message)||e)});return}chunks=[];mr=new MediaRecorder(s);mr.ondataavailable=e=>chunks.push(e.data);
  mr.onstop=async()=>{s.getTracks().forEach(t=>t.stop());document.getElementById('recstate').innerHTML='<small>sending…</small>';let wav;
  try{wav=await toWav(new Blob(chunks,{type:mr.mimeType||'audio/webm'}))}catch(e){show({error:"This browser couldn't convert the recording to WAV: "+((e&&e.message)||e)});document.getElementById('recstate').innerHTML='<small>idle</small>';return}
  const j=await api('/voice',{method:'POST',headers:Object.assign({'Content-Type':'audio/wav'},H),body:wav});show(j);document.getElementById('recstate').innerHTML='<small>idle</small>';refreshLog()};
