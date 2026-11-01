@@ -44,10 +44,12 @@ class Agent:
         self.context_file = context_file
         self.stall_days = stall_days
         self.ctx = ctx_store.load(context_file)
+        self.record = True   # False while serving a try-it visitor: their words stay out of the log
 
     def _say(self, text: str, kind: str = "info") -> None:
         say(text)
-        self.ctx.remember(text, kind)
+        if self.record:
+            self.ctx.remember(text, kind)
 
     def _save(self) -> None:
         ctx_store.save(self.context_file, self.ctx)

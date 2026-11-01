@@ -47,7 +47,7 @@ textarea{width:100%;min-height:90px;padding:10px;border-radius:12px;border:1px s
 ul.q{padding-left:18px}ul.q li{margin:6px 0}small{color:var(--mute)}
 </style></head><body><main>
 <h1>IrysQuest</h1><p class="sub">An agent that digs up what you've buried. It proposes, you approve.</p>
-<div id="try" class="card" hidden><span class="pill">Try-it mode</span><p>You're a visitor: you'll see what the agent would propose for your own words. Nothing is saved or sent anywhere.</p></div>
+<div id="try" class="card" hidden><span class="pill">Try-it mode</span><p>You're a visitor: you'll see what the agent would propose for your own words. Your words go to Meta's model to produce the preview; nothing is saved to the quest log.</p></div>
 
 <div class="card"><h2>Say it</h2><p><small>Ramble about everything on your mind. The agent splits it into quests.</small></p>
 <div class="row"><button id="rec">● Record</button><button id="stop" disabled>■ Stop &amp; send</button><span id="recstate"><small>idle</small></span></div></div>
@@ -158,54 +158,59 @@ def make_handler(state: _State):
             path = urlparse(self.path).path
             visitor = self._is_visitor()
             preview = visitor
+            warn = say if visitor else (lambda text: state.agent._say(text, "warn"))
             try:
                 with state.lock:
                     ag = state.agent
-                    if path == "/text":
-                        text = json.loads(self._body() or b"{}").get("text", "").strip()
-                        if not text:
-                            return self._json(400, {"error": "Nothing to read."})
-                        ag._say("Reading a typed brain dump.")
-                        quests = ag.muse.capture_text(text, "" if visitor else ag.ctx.profile)
-                        return self._json(200, {"quests": ag.capture(quests, source="notes", preview=preview)})
-                    if path == "/voice":
-                        audio = self._body()
-                        if len(audio) < 1000:
-                            return self._json(400, {"error": "That recording is empty."})
-                        ag._say(f"Transcribing {len(audio) // 1024} KB of audio with Muse Voice Transcribe.")
-                        transcript = ag.muse.transcribe(audio, "capture.wav")
-                        ag._say(f'Heard: "{transcript[:160]}{"…" if len(transcript) > 160 else ""}"')
-                        quests = ag.muse.capture_text(transcript, "" if visitor else ag.ctx.profile)
-                        return self._json(200, {"transcript": transcript, "quests": ag.capture(quests, source="voice note", preview=preview)})
-                    if path == "/photo":
-                        image = self._body()
-                        mime = self.headers.get("Content-Type", "image/jpeg").split(";")[0]
-                        if len(image) < 1000:
-                            return self._json(400, {"error": "No photo received."})
-                        ag._say(f"Reading a {len(image) // 1024} KB photo with Muse Spark.")
-                        quests = ag.muse.capture_image(image, mime, "" if visitor else ag.ctx.profile)
-                        return self._json(200, {"quests": ag.capture(quests, source="photo", preview=preview)})
-                    if visitor:
-                        return self._json(403, {"error": "Visitors can only preview captures."})
-                    if path == "/dig":
-                        dry = (parse_qs(urlparse(self.path).query).get("dry") or ["0"])[0] == "1"
-                        results = ag.dig(dry_run=dry)
-                        return self._json(200, {"results": [r.__dict__ for r in results]})
-                    if path == "/reckon":
-                        v = ag.reckoning()
-                        return self._json(200, v.__dict__)
-                    if path == "/profile":
-                        ag.set_profile(json.loads(self._body() or b"{}").get("profile", ""))
-                        return self._json(200, {"ok": True})
-                    if path == "/rules":
-                        ag.set_rules(json.loads(self._body() or b"{}").get("rules", ""))
-                        return self._json(200, {"ok": True})
-                    return self._json(404, {"error": "not found"})
+                    ag.record = not visitor   # a visitor's words never reach the owner's log or context.json
+                    try:
+                        if path == "/text":
+                            text = json.loads(self._body() or b"{}").get("text", "").strip()
+                            if not text:
+                                return self._json(400, {"error": "Nothing to read."})
+                            ag._say("Reading a typed brain dump.")
+                            quests = ag.muse.capture_text(text, "" if visitor else ag.ctx.profile)
+                            return self._json(200, {"quests": ag.capture(quests, source="notes", preview=preview)})
+                        if path == "/voice":
+                            audio = self._body()
+                            if len(audio) < 1000:
+                                return self._json(400, {"error": "That recording is empty."})
+                            ag._say(f"Transcribing {len(audio) // 1024} KB of audio with Muse Voice Transcribe.")
+                            transcript = ag.muse.transcribe(audio, "capture.wav")
+                            ag._say(f'Heard: "{transcript[:160]}{"…" if len(transcript) > 160 else ""}"')
+                            quests = ag.muse.capture_text(transcript, "" if visitor else ag.ctx.profile)
+                            return self._json(200, {"transcript": transcript, "quests": ag.capture(quests, source="voice note", preview=preview)})
+                        if path == "/photo":
+                            image = self._body()
+                            mime = self.headers.get("Content-Type", "image/jpeg").split(";")[0]
+                            if len(image) < 1000:
+                                return self._json(400, {"error": "No photo received."})
+                            ag._say(f"Reading a {len(image) // 1024} KB photo with Muse Spark.")
+                            quests = ag.muse.capture_image(image, mime, "" if visitor else ag.ctx.profile)
+                            return self._json(200, {"quests": ag.capture(quests, source="photo", preview=preview)})
+                        if visitor:
+                            return self._json(403, {"error": "Visitors can only preview captures."})
+                        if path == "/dig":
+                            dry = (parse_qs(urlparse(self.path).query).get("dry") or ["0"])[0] == "1"
+                            results = ag.dig(dry_run=dry)
+                            return self._json(200, {"results": [r.__dict__ for r in results]})
+                        if path == "/reckon":
+                            v = ag.reckoning()
+                            return self._json(200, v.__dict__)
+                        if path == "/profile":
+                            ag.set_profile(json.loads(self._body() or b"{}").get("profile", ""))
+                            return self._json(200, {"ok": True})
+                        if path == "/rules":
+                            ag.set_rules(json.loads(self._body() or b"{}").get("rules", ""))
+                            return self._json(200, {"ok": True})
+                        return self._json(404, {"error": "not found"})
+                    finally:
+                        ag.record = True
             except MuseError as e:
-                state.agent._say(f"Muse error: {e}", "warn")
+                warn(f"Muse error: {e}")
                 return self._json(502, {"error": str(e)})
             except Exception as e:  # keep the page alive whatever happens
-                state.agent._say(f"Unexpected error: {e!r}", "warn")
+                warn(f"Unexpected error: {e!r}")
                 return self._json(500, {"error": "Something went wrong; see the console."})
 
         def log_message(self, *a):

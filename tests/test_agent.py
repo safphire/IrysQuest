@@ -140,3 +140,30 @@ def test_reckoning_single_quest_is_fine(world):
     finally:
         fake_server.QUESTS[1]["status"] = "tracked"
     assert v.verdict == "fine" and "Only one quest" in v.reason and fake_server.PROPOSALS == []
+
+
+def test_try_it_visitor_words_stay_out_of_the_log(world):
+    import threading
+    from http.server import ThreadingHTTPServer
+
+    import httpx
+
+    from irysquest import serve
+
+    client, cf = world
+    ag = Agent(client, ScriptedMuse([]), cf, stall_days=3)
+    state = serve._State()
+    state.agent, state.try_token = ag, "tok"
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), serve.make_handler(state))
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_address[1]}"
+    try:
+        r = httpx.post(f"{base}/text?try=tok", json={"text": "visit grandma"}).json()
+        assert [q["outcome"] for q in r["quests"]] == ["preview"] and fake_server.PROPOSALS == []
+        assert not any("grandma" in l["text"] for l in ag.ctx.log + ctx_store.load(cf).log)
+        assert httpx.post(f"{base}/dig?try=tok").status_code == 403
+        # the owner's own capture is still logged, and proposed
+        httpx.post(f"{base}/text", json={"text": "fix the bike"})
+        assert any("fix the bike" in l["text"] for l in ctx_store.load(cf).log) and len(fake_server.PROPOSALS) == 1
+    finally:
+        srv.shutdown()
