@@ -76,6 +76,7 @@ Open the capture page from your phone on the same Wi-Fi: `http://<PC IP>:8787/`.
 
 Open-weight mode: set `MUSE_PROVIDER=open` and `OPEN_BASE_URL`/`OPEN_API_KEY` to any OpenAI-compatible host
 serving `muse-spark-open-1026` (Baseten, Modal, or a local server), or pass `--provider open` per command.
+Running it locally with Ollama or vLLM: [docs/OPEN_WEIGHT.md](docs/OPEN_WEIGHT.md).
 
 Tests run without a NextQuest server, against a small fake in `tests/`:
 
@@ -92,7 +93,7 @@ pip install -e ".[dev]" && pytest
 - [x] The weekly reckoning: one cross-quest verdict (park / focus / fine), Sundays
 - [x] `irysquest serve`: morning schedule, Dig now, agent console
 - [x] Capture page: voice (Muse Voice Transcribe), notebook photo (Muse Spark vision), typed; try-it mode
-- [x] Open-weight mode (`--provider open`) — needs a host for Muse Spark Open
+- [x] Open-weight mode: implemented against the Ollama/vLLM OpenAI-compatible API, unverified on real Muse Glimmer
 - [ ] Verified on a real phone end to end (in progress)
 
 ## License
