@@ -45,3 +45,10 @@
   coach loop: the question is different (what is crowding what?) and the answer is one verdict. Park is the only
   verdict that proposes anything; focus and fine are advice in the console. The same guardrails apply: a quest the
   user refused to park is downgraded to focus. Runs on Sundays with the morning dig, or on demand.
+- **D-18 (1 Nov)** `serve --https` with a self-signed certificate, so "Say it" works from a phone. Browsers only
+  expose `getUserMedia` in a secure context, and `http://<LAN IP>` isn't one (only localhost is): on the phone,
+  tapping Record did nothing at all. The certificate is made once with `openssl` (on PATH; Git for Windows ships
+  one) into `.irysquest/tls/`, covering localhost, 127.0.0.1 and the PC's LAN IP; the phone shows a warning the
+  first time, which is fine for a dev build. Python's `cryptography` would avoid the openssl step but is a new
+  dependency, and it isn't installed. Without openssl, tunnel port 8787 instead (`ngrok http 8787`), since ngrok
+  gives an https URL. Plain http stays the default: localhost needs nothing more.

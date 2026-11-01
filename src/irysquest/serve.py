@@ -7,15 +7,24 @@ Everything it produces is a proposal in NextQuest; nothing is written directly.
 
 Try-it mode: with TRY_IT_TOKEN set, a visitor who opens /?try=<token> sees what
 the agent would propose for *their* dump, and nothing is submitted.
+
+HTTPS (`--https`): phone browsers only allow the microphone on a secure origin,
+and http://<LAN IP> isn't one. A self-signed certificate, made once with openssl,
+makes it one; the phone shows a certificate warning the first time.
 """
 
 from __future__ import annotations
 
 import json
+import shutil
+import socket
+import ssl
+import subprocess
 import threading
 import time
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .agent import Agent
@@ -223,15 +232,54 @@ def _schedule(state: _State, dig_at: str, stop: threading.Event) -> None:
                 state.agent._say(f"Scheduled dig failed: {e!r}", "warn")
 
 
-def serve(agent: Agent, host: str, port: int, dig_at: str, try_token: str) -> None:
+def lan_ip() -> str:
+    """The address other devices on the network reach this PC at. Nothing is sent (UDP connect only)."""
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        try:
+            s.connect(("10.255.255.255", 1))
+            return s.getsockname()[0]
+        except OSError:
+            return "127.0.0.1"
+
+
+def ensure_cert(tls_dir: Path, ip: str) -> tuple[Path, Path]:
+    """A self-signed certificate for localhost and this PC's LAN IP, made once with openssl."""
+    cert, key = tls_dir / "cert.pem", tls_dir / "key.pem"
+    if cert.exists() and key.exists():
+        return cert, key
+    openssl = shutil.which("openssl")
+    if not openssl:
+        raise SystemExit("--https needs openssl on PATH (Git for Windows ships one). "
+                         "Or tunnel the page instead: ngrok http 8787 (see README).")
+    tls_dir.mkdir(parents=True, exist_ok=True)
+    subprocess.run([openssl, "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "365",
+                    "-keyout", str(key), "-out", str(cert), "-subj", "/CN=IrysQuest dev",
+                    "-addext", f"subjectAltName=DNS:localhost,IP:127.0.0.1,IP:{ip}"],
+                   check=True, capture_output=True)
+    return cert, key
+
+
+def use_tls(srv: ThreadingHTTPServer, cert: Path, key: Path) -> None:
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(cert, key)
+    # Handshake on first read, in the request's thread, so one slow client can't block accept().
+    srv.socket = ctx.wrap_socket(srv.socket, server_side=True, do_handshake_on_connect=False)
+
+
+def serve(agent: Agent, host: str, port: int, dig_at: str, try_token: str, tls_dir: Path | None = None) -> None:
     state = _State()
     state.agent, state.try_token = agent, try_token
     stop = threading.Event()
     threading.Thread(target=_schedule, args=(state, dig_at, stop), daemon=True).start()
     srv = ThreadingHTTPServer((host, port), make_handler(state))
-    say(f"Capture page at http://{host}:{port}/  (on your phone: http://<this PC's LAN IP>:{port}/)")
+    ip, scheme = lan_ip(), "https" if tls_dir else "http"
+    if tls_dir:
+        use_tls(srv, *ensure_cert(tls_dir, ip))
+    say(f"Capture page at {scheme}://{host}:{port}/  (on your phone: {scheme}://{ip}:{port}/)")
+    if tls_dir:
+        say("Self-signed certificate: the phone warns once; choose Advanced → Proceed.")
     if try_token:
-        say(f"Try-it link for friends: http://<public address>:{port}/?try={try_token}")
+        say(f"Try-it link for friends: {scheme}://{ip}:{port}/?try={try_token}")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

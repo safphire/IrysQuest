@@ -71,7 +71,10 @@ irysquest capture "finish the pilot script, mom's birthday, learn to sing"
 irysquest serve              # capture page (voice, photo, text), Dig now, and the 08:00 schedule
 ```
 
-Open the capture page from your phone on the same Wi-Fi: `http://<PC IP>:8787/`. With `TRY_IT_TOKEN` set,
+Open the capture page from your phone on the same Wi-Fi. For voice, run `irysquest serve --https` and open
+`https://<PC IP>:8787/`: phone browsers only allow the microphone over HTTPS. The certificate is self-signed
+(made once with `openssl`), so the phone warns the first time; choose Advanced → Proceed. No openssl? Use
+`ngrok http 8787` and open the https URL it prints. With `TRY_IT_TOKEN` set,
 `/?try=<token>` is a visitor mode: friends see what the agent would propose for their own words; nothing is sent.
 
 Open-weight mode: set `MUSE_PROVIDER=open` and `OPEN_BASE_URL`/`OPEN_API_KEY` to any OpenAI-compatible host

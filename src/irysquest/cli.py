@@ -10,7 +10,7 @@
     irysquest reckon           the weekly reckoning: the whole board at once
     irysquest profile [text]   show or set what the agent knows about you
     irysquest rules [text]     show or set your standing rules for the coach
-    irysquest serve            capture page + "dig now" + the morning schedule
+    irysquest serve [--https]  capture page + "dig now" + the morning schedule
 """
 
 from __future__ import annotations
@@ -96,7 +96,8 @@ def cmd_rules(settings, args) -> int:
 
 def cmd_serve(settings, args) -> int:
     from .serve import serve
-    serve(_agent(settings, args.provider), settings.serve_host, settings.serve_port, settings.dig_at, settings.try_it_token)
+    serve(_agent(settings, args.provider), settings.serve_host, settings.serve_port, settings.dig_at, settings.try_it_token,
+          tls_dir=settings.home / "tls" if args.https else None)
     return 0
 
 
@@ -137,7 +138,9 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("text", nargs="?", default=None)
     s.set_defaults(fn=cmd_rules)
 
-    sub.add_parser("serve", help="capture page, dig now, and the morning schedule").set_defaults(fn=cmd_serve)
+    s = sub.add_parser("serve", help="capture page, dig now, and the morning schedule")
+    s.add_argument("--https", action="store_true", help="serve over HTTPS with a self-signed certificate (needed for the phone's microphone)")
+    s.set_defaults(fn=cmd_serve)
 
     args = p.parse_args(argv)
     settings = config.load(args.env)
