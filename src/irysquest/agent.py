@@ -122,8 +122,6 @@ class Agent:
                 d.reason = "I've already asked what this is for; I'll wait for the why."
             if d.assumption and d.move not in ("ask_why", "leave_alone"):
                 self._say(f"  Assuming: {d.assumption}")
-                notes.assumption = d.assumption
-                notes.intent = notes.intent or d.assumption
 
             if d.move == "leave_alone":
                 self._say(f"  Leaving it alone: {d.reason}")
@@ -133,7 +131,6 @@ class Agent:
             if d.move == "ask_why":
                 res.step, res.minutes = WHY_STEP, 2
                 res.reason = d.reason or "I can't tell yet what this quest is for, so the smallest useful move is to tell me."
-                notes.asked_for_why = True
                 self._say("  Purpose unclear and no why set: asking instead of guessing.")
             elif d.move == "shrink_step":
                 res.step = str(d.args.get("step", "")).strip()[:200]
@@ -163,7 +160,7 @@ class Agent:
             reason = res.reason
             if d.assumption and d.move not in ("ask_why",):
                 reason += f" (I'm assuming this is {d.assumption}; correct me in the Why if not.)"
-            reason += f" Untouched {s.days} days" + (f"; about {res.minutes} minutes." if res.minutes else ".")
+            reason += f" Quiet for {s.days} days" + (f"; about {res.minutes} minutes." if res.minutes else ".")
             reason = reason[:1000]
             try:
                 if d.move in ("shrink_step", "ask_why"):
@@ -173,8 +170,14 @@ class Agent:
                 else:
                     r = self.client.propose_park_quest(s.quest_id, reason=reason)
                 res.proposal_id, res.outcome = str(r.get("proposal_id", "")), "proposed"
+                # Memory is written only once something reached the user: a dry run must leave no trace.
                 notes.last_proposed_at = datetime.now().isoformat(timespec="seconds")
                 notes.last_move = d.move
+                if d.move == "ask_why":
+                    notes.asked_for_why = True
+                if d.assumption and d.move != "ask_why":
+                    notes.assumption = d.assumption
+                    notes.intent = notes.intent or d.assumption
                 self._say("  Proposed. Waiting for your call in the app.")
             except ToolError as e:
                 res.outcome = "declined"
@@ -301,7 +304,6 @@ class Agent:
             self._say(f'  → focus on "{title}" this week. {v.reason} (No change proposed.)')
         else:
             self._say(f"  → the board is fine. {v.reason}")
-        self.ctx.remember(f"reckoning:{v.verdict}:{title}", "reckoning")
         self._save()
         return v
 

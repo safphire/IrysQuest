@@ -62,3 +62,7 @@
 - **D-21 (1 Nov)** Open-weight verification is on standby, not dropped. The code path is tested against a fake
   OpenAI-compatible endpoint (`tests/test_open_provider.py`); running it on real Muse Glimmer needs the weights on
   disk or a hosted endpoint, neither of which fits the remaining days. README says so plainly rather than claiming it.
+- **D-22 (1 Nov)** The agent's memory is written only when something reached the user. A dry run used to set
+  `asked_for_why` and the assumption notes, so a quest previewed once could never get its why-question for real
+  (found in the 1 Nov evening verification). Now `last_proposed_at`, `last_move`, `asked_for_why`, `assumption` and
+  `intent` are all set in the one place a proposal succeeds. Reasons say "Quiet for N days", not "Untouched".

@@ -200,3 +200,16 @@ def test_coach_prompt_carries_the_research_and_no_banned_words():
     from irysquest.coach import SYSTEM
     for phrase in ("mood repair", "If-then", "forgive", "Fresh start", "Banned words"):
         assert phrase in SYSTEM
+
+
+def test_dry_run_leaves_no_trace_in_memory(world):
+    client, cf = world
+    muse = ScriptedMuse([{"role": "assistant", "content": None, "tool_calls": [call("ask_why", reason="No idea what this is for.")]}])
+    res = Agent(client, muse, cf, stall_days=3).dig(dry_run=True)
+    assert res[0].move == "ask_why" and res[0].outcome == "dry-run"
+    n = ctx_store.load(cf).quests.get("q1")
+    assert n is None or (n.asked_for_why is False and n.assumption == "" and n.last_proposed_at == "")
+    # and the real run afterwards still gets to ask
+    muse = ScriptedMuse([{"role": "assistant", "content": None, "tool_calls": [call("ask_why", reason="still unclear")]}])
+    res = Agent(client, muse, cf, stall_days=3).dig()
+    assert res[0].outcome == "proposed" and ctx_store.load(cf).quests["q1"].asked_for_why is True
