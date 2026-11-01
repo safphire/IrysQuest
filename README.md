@@ -55,7 +55,80 @@ not promised by the agent.
       └──────────────────────┘              existing, unchanged         └────────────────┘
 ```
 
-## Running it
+## Running it yourself (judges)
+
+IrysQuest is an agent for an app that already exists, so it needs three things: the
+[NextQuest](https://github.com/safphire/NextQuest) server, the NextQuest Android app paired to it (that's where
+proposals are accepted or rejected), and a Meta Model API key. The tests need none of them (last step).
+
+**1. The NextQuest server** (Docker; unchanged by this project)
+
+```bash
+git clone https://github.com/safphire/NextQuest && cd NextQuest
+cp .env.example .env       # set ADMIN_PASSWORD (12+ characters)
+docker compose up -d
+curl http://localhost:8080/health
+```
+
+The app only pairs over HTTPS, so put the server behind a tunnel, e.g. `ngrok http 8080`. Set `PUBLIC_URL` in
+NextQuest's `.env` to the tunnel's `https://` address and run `docker compose up -d` again.
+
+**2. The app, paired.** Install the debug APK (CI artifacts on the NextQuest repo, or
+`./gradlew :app:assembleDebug`). Open `PUBLIC_URL` in a browser, sign in with the admin password, choose **Pair a
+device** and scan the QR code with the phone (or enter the code under **Settings → Sync & AI**).
+
+**3. The agent**
+
+```bash
+git clone https://github.com/safphire/IrysQuest && cd IrysQuest
+python -m venv .venv && . .venv/bin/activate    # Windows: .venv\Scripts\activate
+pip install -e .
+cp .env.example .env       # QUEST_SERVER_URL = NextQuest's PUBLIC_URL; META_API_KEY = your key
+irysquest login            # a browser opens the server's consent page; approve with the admin password
+irysquest today            # proves the connection: tracked quests and slots
+```
+
+**4. Something to dig into.** Track a quest or two in the app, or seed a demo board:
+
+```bash
+python scripts/seed_demo.py    # proposes 3 mock quests; accept them in the app's Proposals screen, then track them
+```
+
+The server stamps each quest's last-touched time itself, so new quests are 0 days old. `--days 0` treats
+everything as stalled:
+
+```bash
+irysquest dig --dry-run --days 0   # watch the coach look (get_quest, get_history, list_decisions) and decide
+irysquest dig --days 0             # the same, proposed: accept, edit or reject in the app
+irysquest reckon --dry-run         # the weekly reckoning over the whole board
+irysquest serve --https            # capture page for the phone (voice, photo, text) and Dig now
+```
+
+**5. Tests**, with no server, phone or key:
+
+```bash
+pip install -e ".[dev]" && pytest
+```
+
+Open-weight mode on a local model: [docs/OPEN_WEIGHT.md](docs/OPEN_WEIGHT.md).
+
+## What to look at
+
+- [`src/irysquest/coach.py`](src/irysquest/coach.py): the agent. A tool-calling loop where Muse Spark looks
+  (`get_quest`, `get_history`, `list_decisions`), then makes exactly one decision call (shrink, subquest, park,
+  ask why, leave alone), within a budget of six calls.
+- [`src/irysquest/reckoning.py`](src/irysquest/reckoning.py): the weekly reckoning. One verdict over the whole
+  board (park / focus / fine), downgraded if it names a quest the user protected.
+- [`src/irysquest/agent.py`](src/irysquest/agent.py): the loop around the coach, and the guardrails that live in
+  code rather than in the prompt (in `dig`). No park after a refused park, no second ask-why, no replacing an
+  unanswered why-question, every proposal states its assumption.
+- [`src/irysquest/serve.py`](src/irysquest/serve.py): the capture page, the browser-side WAV conversion for voice,
+  try-it mode, and the morning schedule.
+- [`docs/DECISIONS.md`](docs/DECISIONS.md): why it is built this way, one dated line per decision.
+- [`docs/VERIFICATION.md`](docs/VERIFICATION.md): what was run against the real server, the Meta Model API and a
+  real phone, what broke, and what's still unverified.
+
+## Everyday commands
 
 Prerequisites: Python 3.11+, a running NextQuest server (its `docker compose up`), and a Meta Model API key.
 
@@ -75,7 +148,8 @@ Open the capture page from your phone on the same Wi-Fi. For voice, run `irysque
 `https://<PC IP>:8787/`: phone browsers only allow the microphone over HTTPS. The certificate is self-signed
 (made once with `openssl`), so the phone warns the first time; choose Advanced → Proceed. No openssl? Use
 `ngrok http 8787` and open the https URL it prints. With `TRY_IT_TOKEN` set,
-`/?try=<token>` is a visitor mode: friends see what the agent would propose for their own words; nothing is sent.
+`/?try=<token>` is a visitor mode: friends see what the agent would propose for their own words. Their words go to
+Meta's model to produce the preview; nothing is proposed or saved to the quest log.
 
 Open-weight mode: set `MUSE_PROVIDER=open` and `OPEN_BASE_URL`/`OPEN_API_KEY` to any OpenAI-compatible host
 serving `muse-glimmer` (Ollama, vLLM, or a hosted endpoint), or pass `--provider open` per command.
