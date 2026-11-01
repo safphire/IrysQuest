@@ -120,3 +120,54 @@ found". How to run it for real: `docs/OPEN_WEIGHT.md`.
 
 Nothing pending. Four tracked quests: the Kurzgesagt quest, Valorant (voice test), the pilot script and one song
 by December (both demo data). The bike-brake demo proposal was rejected.
+
+## 1 Nov 2026 (evening) — decisions applied, publication checks
+
+Starting point: `f527cc2`. 27 tests at the end (21 before), all passing.
+
+### Decisions applied
+
+- `991a185` Try-it: a visitor's requests no longer reach the owner's log or `context.json`; the banner now says
+  "Your words go to Meta's model to produce the preview; nothing is saved to the quest log." Checked live on the
+  restarted `serve --https`: visitor `POST /text` returned a preview, `context.json` kept the same number of log
+  entries (95 → 95) with no trace of the visitor's words, `/dig` still 403. The PC's console still echoes the
+  visitor's text (stderr, not saved by the agent); if stderr is redirected to a file, it lands there.
+- `f3b9cbb` The open-weight model is Muse Glimmer everywhere; `OPEN_MODEL` defaults to `muse-glimmer`, with
+  `meta-models/muse-spark-open-1026` as a commented alternative in `.env.example`.
+- `ed599f9` A quest whose step is the unanswered why-question (empty Why) is left alone without calling Muse.
+  This is the Kurzgesagt case from the earlier run, where the coach replaced its own question with a shrink step.
+- `23acd72` The phone in the voice check was Chrome on Android (confirmed by the user; the server doesn't log
+  User-Agent).
+- The README's "Verified on a real phone end to end" stays unticked until photo and Dig now are tried from the
+  phone.
+
+### Fixes from the earlier known-issues list
+
+- `096b7f6` A failed token refresh says "Session expired" only for a 400/401 `invalid_grant`; a tunnel's 404,
+  a 5xx or a connection error says "Server unreachable … your sign-in is kept". Tested with all four cases.
+- `01c4ac5` Single-quest reckoning prints its board read and verdict line.
+- `972bc03` pytest-asyncio removed (no async tests; it only printed a deprecation warning).
+- The local clone had no fetch refspec for `origin`; added (`+refs/heads/*:refs/remotes/origin/*`) and `main`
+  now tracks `origin/main`. Local git config only, nothing committed.
+
+### Publication checks (nothing made public)
+
+- **gitleaks 8.30.1** (installed with winget): `gitleaks git .` over the full history, 32 commits, **no leaks**.
+  `gitleaks dir .` over the working tree found 3, all in gitignored, untracked files: `.env`,
+  `.irysquest/tokens.json` and `.irysquest/tls/key.pem`. Also checked by counts only: the API key, its 8-character
+  prefix and the try-it token appear 0 times in `git log -p --all`; `.env` and `.irysquest/` were never committed.
+- **Licences** (`pip-licenses` in the venv only): `docs/THIRD_PARTY_LICENSES.md` (`6026b1f`). All runtime
+  dependencies are MIT, BSD-3-Clause or PSF-2.0 except **certifi (MPL-2.0)**, the CA bundle, used unmodified;
+  MPL-2.0 is compatible with the AGPL.
+- **SPDX headers**: every tracked Python file had one except the empty `tests/__init__.py`; it and
+  `pyproject.toml` got one (`ce38eff`).
+- **`tests/fixtures/notes.jpg`**: generated (PIL, `535d877`), 900×620, JFIF header only, no EXIF. Content is four
+  invented goals in a handwriting-style font; no personal data.
+- **README** (`3b10204`): "Running it yourself (judges)" from clone to first dig, including the NextQuest server
+  (repo, `docker compose up -d`, HTTPS tunnel, pairing the app), and "What to look at".
+
+### Running overnight
+
+`irysquest serve --https` was restarted at 15:43 as a detached process (console in
+`%TEMP%\irysquest-serve.err.log`) so the scheduled dig fires on Mon 2 Nov at 08:00. Not yet observed: check for
+"Morning. Checking what's buried." in that file or on the page's console.
