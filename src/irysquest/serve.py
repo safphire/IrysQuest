@@ -30,7 +30,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .agent import Agent
 from .console import say
-from .muse import MuseError
+from .muse import CapturedQuest, MuseError
 
 PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>IrysQuest</title>
@@ -44,7 +44,7 @@ button.primary{background:var(--lime);border-color:var(--lime)}button.rec{backgr
 textarea{width:100%;min-height:90px;padding:10px;border-radius:12px;border:1px solid var(--line);font:15px system-ui}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.pill{font-size:12px;color:var(--violet);border:1px solid var(--violet);border-radius:999px;padding:2px 10px}
 #log{font:13px/1.45 ui-monospace,Menlo,monospace;background:#102418;color:#d9f5c1;border-radius:12px;padding:12px;max-height:260px;overflow:auto;white-space:pre-wrap}
-ul.q{padding-left:18px}ul.q li{margin:6px 0}small{color:var(--mute)}
+ul.q{padding-left:18px}ul.q li{margin:6px 0}small{color:var(--mute)}.res{border-top:1px solid var(--line);padding:8px 0}.res:first-child{border-top:0}.settle{margin:8px 0}.settle input{width:100%;margin-top:4px;padding:8px;border-radius:10px;border:1px solid var(--line);font:15px system-ui}
 </style></head><body><main>
 <h1>IrysQuest</h1><p class="sub">An agent that digs up what you've buried. It proposes, you approve.</p>
 <div id="try" class="card" hidden><span class="pill">Try-it mode</span><p>You're a visitor: you'll see what the agent would propose for your own words. Your words go to Meta's model to produce the preview; nothing is saved to the quest log.</p></div>
@@ -67,7 +67,7 @@ ul.q{padding-left:18px}ul.q li{margin:6px 0}small{color:var(--mute)}
 <textarea id="rules"></textarea><div class="row"><button id="saverules">Save</button></div></div>
 </div>
 
-<div class="card"><h2>Result</h2><div id="result"><small>Nothing yet.</small></div></div>
+<div class="card"><h2>Result</h2><div id="result"></div></div>
 <div class="card"><h2>Agent console</h2><div id="log"></div></div>
 </main>
 <script>
@@ -75,10 +75,18 @@ const qs=new URLSearchParams(location.search);const tryTok=qs.get('try');const i
 if(isTry){document.getElementById('try').hidden=false;document.getElementById('owner').hidden=true}
 const H={'ngrok-skip-browser-warning':'1'};
 const api=(p,opt={})=>fetch(p+(isTry?(p.includes('?')?'&':'?')+'try='+encodeURIComponent(tryTok):''),Object.assign({headers:H},opt)).then(r=>r.json());
-function show(j){const r=document.getElementById('result');if(j.error){r.innerHTML='<b>Hmm.</b> '+esc(j.error);return}
- if(j.quests){r.innerHTML=(j.transcript?'<p><small>Heard: '+esc(j.transcript)+'</small></p>':'')+'<ul class="q">'+j.quests.map(q=>'<li><b>'+esc(q.title)+'</b>'+(q.next_step?'<br><small>first step: '+esc(q.next_step)+'</small>':'')+(q.outcome==='proposed'?' <span class="pill">proposed</span>':q.outcome==='preview'?' <span class="pill">preview</span>':'')+'</li>').join('')+'</ul>';return}
- if(j.results){r.innerHTML=j.results.length?'<ul class="q">'+j.results.map(x=>'<li><b>'+esc(x.title)+'</b> — <span class="pill">'+esc(x.move||'')+'</span> '+esc(x.step)+(x.minutes?' <small>('+x.minutes+' min)</small>':'')+' <small>'+esc(x.outcome)+'</small>'+(x.assumption?'<br><small>assuming: '+esc(x.assumption)+'</small>':'')+'</li>').join('')+'</ul>':'<small>Nothing is buried.</small>';return}
- r.innerHTML='<small>'+esc(JSON.stringify(j))+'</small>'}
+let settleBatch=null;
+function busy(m){const r=document.getElementById('result');let b=document.getElementById('busy');if(!b){b=document.createElement('div');b.id='busy';r.prepend(b)}b.innerHTML='<small>'+m+'</small>'}
+function keep(html){const r=document.getElementById('result');const b=document.getElementById('busy');if(b)b.remove();const t=new Date().toTimeString().slice(0,5);r.insertAdjacentHTML('afterbegin','<div class="res"><small>'+t+'</small>'+html+'</div>');while(r.children.length>5)r.lastChild.remove()}
+function show(j){if(j.error){keep('<p><b>Hmm.</b> '+esc(j.error)+'</p>');return}
+ if(j.settle){settleBatch=j;keep((j.transcript?'<p><small>Heard: '+esc(j.transcript)+'</small></p>':'')+'<p><small>Before these are proposed, settle what done looks like. Your answer becomes the Why of each quest; leave one blank and the coach may ask later.</small></p>'+j.quests.map((q,i)=>'<div class="settle"><b>'+esc(q.title)+'</b>'+(q.next_step?'<br><small>first step: '+esc(q.next_step)+'</small>':'')+(q.question?'<br><label><small>'+esc(q.question)+'</small><input id="why'+i+'" value="'+esc(q.why||'')+'" placeholder="one line"></label>':'<br><small>why: '+esc(q.why)+'</small>')+'</div>').join('')+'<div class="row"><button id="propose" class="primary">Propose these</button><button id="discard">Discard</button></div>');
+  document.getElementById('propose').onclick=proposeSettled;document.getElementById('discard').onclick=()=>{settleBatch=null;document.querySelector('.res').remove()};return}
+ if(j.quests){keep((j.transcript?'<p><small>Heard: '+esc(j.transcript)+'</small></p>':'')+'<ul class="q">'+j.quests.map(q=>'<li><b>'+esc(q.title)+'</b>'+(q.why?'<br><small>why: '+esc(q.why)+'</small>':'')+(q.next_step?'<br><small>first step: '+esc(q.next_step)+'</small>':'')+(q.outcome==='proposed'?' <span class="pill">proposed</span>':q.outcome==='preview'?' <span class="pill">preview</span>':'')+'</li>').join('')+'</ul>');return}
+ if(j.results){keep(j.results.length?'<ul class="q">'+j.results.map(x=>'<li><b>'+esc(x.title)+'</b> — <span class="pill">'+esc(x.move||'')+'</span> '+esc(x.step)+(x.minutes?' <small>('+x.minutes+' min)</small>':'')+' <small>'+esc(x.outcome)+'</small>'+(x.assumption?'<br><small>assuming: '+esc(x.assumption)+'</small>':'')+'</li>').join('')+'</ul>':'<small>Nothing is buried.</small>');return}
+ if(j.verdict){keep('<p><span class="pill">'+esc(j.verdict)+'</span> '+esc(j.reason)+'</p><p><small>'+esc(j.board_read)+'</small></p>');return}
+ keep('<small>'+esc(JSON.stringify(j))+'</small>')}
+async function proposeSettled(){if(!settleBatch)return;const b=settleBatch;const quests=b.quests.map((q,i)=>({title:q.title,next_step:q.next_step||'',why:(document.getElementById('why'+i)?document.getElementById('why'+i).value:q.why||'').trim()}));
+ document.getElementById('propose').disabled=true;busy('proposing…');const j=await api('/propose',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({quests,source:b.source})});settleBatch=null;document.querySelector('.res').remove();show(j);refreshLog()}
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 async function refreshLog(){try{const j=await api('/log');document.getElementById('log').textContent=j.log.map(l=>l.at.slice(11)+'  '+l.text).join('\\n');if(j.profile!==undefined&&document.activeElement.id!=='profile')document.getElementById('profile').value=j.profile;if(j.rules!==undefined&&document.activeElement.id!=='rules')document.getElementById('rules').value=j.rules}catch(e){}}
 // Muse Voice Transcribe takes only mono 16-bit PCM WAV at 16 or 24 kHz; browsers record webm/mp4. Convert here.
@@ -94,18 +102,18 @@ async function toWav(blob){const ac=new(window.AudioContext||window.webkitAudioC
 let mr,chunks=[];
 document.getElementById('rec').onclick=async()=>{if(!window.isSecureContext||!navigator.mediaDevices){show({error:'The microphone only works over HTTPS. Restart with irysquest serve --https and open https://'+location.host+'/'});return}
  let s;try{s=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){show({error:'Microphone not available: '+((e&&e.message)||e)});return}chunks=[];mr=new MediaRecorder(s);mr.ondataavailable=e=>chunks.push(e.data);
- mr.onstop=async()=>{s.getTracks().forEach(t=>t.stop());document.getElementById('recstate').innerHTML='<small>sending…</small>';let wav;
+ mr.onstop=async()=>{s.getTracks().forEach(t=>t.stop());document.getElementById('recstate').innerHTML='<small>sending…</small>';busy('transcribing…');let wav;
  try{wav=await toWav(new Blob(chunks,{type:mr.mimeType||'audio/webm'}))}catch(e){show({error:"This browser couldn't convert the recording to WAV: "+((e&&e.message)||e)});document.getElementById('recstate').innerHTML='<small>idle</small>';return}
  const j=await api('/voice',{method:'POST',headers:Object.assign({'Content-Type':'audio/wav'},H),body:wav});show(j);document.getElementById('recstate').innerHTML='<small>idle</small>';refreshLog()};
  mr.start();document.getElementById('rec').classList.add('rec');document.getElementById('rec').disabled=true;document.getElementById('stop').disabled=false;document.getElementById('recstate').innerHTML='<small>recording…</small>'};
 document.getElementById('stop').onclick=()=>{mr.stop();document.getElementById('rec').classList.remove('rec');document.getElementById('rec').disabled=false;document.getElementById('stop').disabled=true};
-document.getElementById('sendphoto').onclick=async()=>{const f=document.getElementById('photo').files[0];if(!f)return;document.getElementById('result').innerHTML='<small>reading…</small>';
+document.getElementById('sendphoto').onclick=async()=>{const f=document.getElementById('photo').files[0];if(!f)return;busy('reading…');
  const j=await api('/photo',{method:'POST',headers:Object.assign({'Content-Type':f.type||'image/jpeg'},H),body:f});show(j);refreshLog()};
-document.getElementById('senddump').onclick=async()=>{const t=document.getElementById('dump').value.trim();if(!t)return;document.getElementById('result').innerHTML='<small>thinking…</small>';
+document.getElementById('senddump').onclick=async()=>{const t=document.getElementById('dump').value.trim();if(!t)return;busy('thinking…');
  const j=await api('/text',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({text:t})});show(j);refreshLog()};
-document.getElementById('dig').onclick=async()=>{document.getElementById('result').innerHTML='<small>digging…</small>';show(await api('/dig',{method:'POST'}));refreshLog()};
-document.getElementById('reckon').onclick=async()=>{document.getElementById('result').innerHTML='<small>looking at the whole board…</small>';const j=await api('/reckon',{method:'POST'});const r=document.getElementById('result');r.innerHTML=j.error?esc(j.error):'<p><span class="pill">'+esc(j.verdict)+'</span> '+esc(j.reason)+'</p><p><small>'+esc(j.board_read)+'</small></p>';refreshLog()};
-document.getElementById('digdry').onclick=async()=>{document.getElementById('result').innerHTML='<small>previewing…</small>';show(await api('/dig?dry=1',{method:'POST'}));refreshLog()};
+document.getElementById('dig').onclick=async()=>{busy('digging…');show(await api('/dig',{method:'POST'}));refreshLog()};
+document.getElementById('reckon').onclick=async()=>{busy('looking at the whole board…');show(await api('/reckon',{method:'POST'}));refreshLog()};
+document.getElementById('digdry').onclick=async()=>{busy('previewing…');show(await api('/dig?dry=1',{method:'POST'}));refreshLog()};
 document.getElementById('saverules').onclick=async()=>{await api('/rules',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({rules:document.getElementById('rules').value})});refreshLog()};
 document.getElementById('saveprofile').onclick=async()=>{await api('/profile',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({profile:document.getElementById('profile').value})});refreshLog()};
 refreshLog();setInterval(refreshLog,5000);
@@ -135,6 +143,20 @@ def make_handler(state: _State):
 
         def _body(self) -> bytes:
             return self.rfile.read(int(self.headers.get("Content-Length", 0)))
+
+        @staticmethod
+        def _settled(ag: Agent, quests: list[CapturedQuest], source: str, visitor: bool) -> dict:
+            """Captures are previewed first. The owner gets one what-does-done-look-like question per quest and
+            proposes from the page (/propose) once answered; a visitor only ever sees the preview."""
+            rows = ag.capture(quests, source=source, preview=True)
+            if visitor:
+                return {"quests": rows}
+            for row, question in zip(rows, ag.settle_questions(quests)):
+                row["question"] = question
+            asked = sum(1 for r in rows if r.get("question"))
+            if rows:
+                ag._say(f"  {len(rows)} quest(s) captured; {asked} question(s) to settle what done looks like.")
+            return {"quests": rows, "settle": True, "source": source}
 
         def do_GET(self):  # noqa: N802
             path = urlparse(self.path).path
@@ -170,7 +192,7 @@ def make_handler(state: _State):
                                 return self._json(400, {"error": "Nothing to read."})
                             ag._say("Reading a typed brain dump.")
                             quests = ag.muse.capture_text(text, "" if visitor else ag.ctx.profile)
-                            return self._json(200, {"quests": ag.capture(quests, source="notes", preview=preview)})
+                            return self._json(200, self._settled(ag, quests, "notes", visitor))
                         if path == "/voice":
                             audio = self._body()
                             if len(audio) < 1000:
@@ -179,7 +201,7 @@ def make_handler(state: _State):
                             transcript = ag.muse.transcribe(audio, "capture.wav")
                             ag._say(f'Heard: "{transcript[:160]}{"…" if len(transcript) > 160 else ""}"')
                             quests = ag.muse.capture_text(transcript, "" if visitor else ag.ctx.profile)
-                            return self._json(200, {"transcript": transcript, "quests": ag.capture(quests, source="voice note", preview=preview)})
+                            return self._json(200, {"transcript": transcript, **self._settled(ag, quests, "voice note", visitor)})
                         if path == "/photo":
                             image = self._body()
                             mime = self.headers.get("Content-Type", "image/jpeg").split(";")[0]
@@ -187,9 +209,19 @@ def make_handler(state: _State):
                                 return self._json(400, {"error": "No photo received."})
                             ag._say(f"Reading a {len(image) // 1024} KB photo with Muse Spark.")
                             quests = ag.muse.capture_image(image, mime, "" if visitor else ag.ctx.profile)
-                            return self._json(200, {"quests": ag.capture(quests, source="photo", preview=preview)})
+                            return self._json(200, self._settled(ag, quests, "photo", visitor))
                         if visitor:
                             return self._json(403, {"error": "Visitors can only preview captures."})
+                        if path == "/propose":
+                            body = json.loads(self._body() or b"{}")
+                            quests = [CapturedQuest(title=str(q.get("title", ""))[:500].strip(), why=str(q.get("why", ""))[:500].strip(),
+                                                    next_step=str(q.get("next_step", ""))[:2000].strip())
+                                      for q in body.get("quests", []) if str(q.get("title", "")).strip()]
+                            if not quests:
+                                return self._json(400, {"error": "Nothing to propose."})
+                            settled = sum(1 for q in quests if q.why)
+                            ag._say(f"Settled: {settled} of {len(quests)} quests have a why. Proposing.")
+                            return self._json(200, {"quests": ag.capture(quests, source=str(body.get("source", "notes"))[:40])})
                         if path == "/dig":
                             dry = (parse_qs(urlparse(self.path).query).get("dry") or ["0"])[0] == "1"
                             results = ag.dig(dry_run=dry)

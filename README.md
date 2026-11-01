@@ -48,13 +48,13 @@ before you ask, and is open source. That's the bet: a coach that learns you by w
 |---|---|---|
 | Every morning (or `irysquest dig`) | Reads your tracked quests, finds the ones nothing has touched in days, and hands each to the **coach**: Muse Spark with tools. It looks at the quest, its history and your past decisions if it needs to, then chooses one move: shrink the step to 2–10 minutes, add a subquest, park the quest, ask what it's for, or leave it alone. The move becomes a proposal with its reason and the assumption behind it | Muse Spark, tool calling |
 | Sundays (or `irysquest reckon`) | The **weekly reckoning**: the coach reads the whole board at once and gives one verdict. *Park* one quest that's crowding the others, naming what it makes room for; *focus* on one this week; or *fine*. An AI that sometimes tells you to do less | Muse Spark |
-| A voice brain dump (capture page) | Transcribes, splits the ramble into separate quests, proposes them | Muse Voice Transcribe + Muse Spark |
+| A voice brain dump (capture page) | Transcribes, splits the ramble into separate quests, asks what done looks like for each, proposes them with your answers as their Why | Muse Voice Transcribe + Muse Spark |
 | A photo of a notebook page or whiteboard | Reads it, turns it into proposed quests | Muse Spark (vision) |
 | `--provider open` | The same loop on Meta's open-weight Muse Glimmer, via Ollama, vLLM or a hosted endpoint | Muse Glimmer |
 
 **It decides, within your rules.** The coach is a tool-calling loop (`coach.py`): read tools to look, one decision tool per move the server allows, a budget of six calls. Your standing rules (`irysquest rules "never park the pilot script"`) go in its system prompt, and hard guardrails sit outside the model: it can't park a quest you refused to park, and it won't ask the same question twice.
 
-**It asks before it guesses.** A quest with no *why* and no history gets a different proposal: a 2-minute step to write what done looks like. Every other proposal states its assumption, so a wrong guess costs you nothing.
+**It settles what done looks like, first.** Every capture is previewed with one question per quest (*"What does done look like for 'learn to sing'?"*); your one-line answer becomes the quest's Why before it's proposed. Mental contrasting, made a habit at the moment of capture. Leave it blank and the coach may ask later: a tracked quest with no *why* and no history gets a 2-minute step to write what done looks like. Every other proposal states its assumption, so a wrong guess costs you nothing.
 
 **It remembers.** `.irysquest/context.json` holds what you told it about yourself (`irysquest profile`), what it inferred about each quest, and what you accepted or rejected. Rejected steps are never re-proposed; the next attempt takes a different angle.
 
@@ -191,7 +191,7 @@ pip install -e ".[dev]" && pytest
 - [x] The coach: tool-calling decisions (shrink / subquest / park / ask / leave) with guardrails
 - [x] The weekly reckoning: one cross-quest verdict (park / focus / fine), Sundays
 - [x] `irysquest serve`: morning schedule, Dig now, agent console
-- [x] Capture page: voice (Muse Voice Transcribe), notebook photo (Muse Spark vision), typed; try-it mode
+- [x] Capture page: voice (Muse Voice Transcribe), notebook photo (Muse Spark vision), typed; settle-what-done-looks-like before proposing; try-it mode
 - [x] Open-weight mode: implemented against the Ollama/vLLM OpenAI-compatible API; verification on real Muse Glimmer is on standby (no local disk for the weights during the event)
 - [ ] Verified on a real phone end to end (in progress)
 

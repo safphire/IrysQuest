@@ -66,3 +66,10 @@
   `asked_for_why` and the assumption notes, so a quest previewed once could never get its why-question for real
   (found in the 1 Nov evening verification). Now `last_proposed_at`, `last_move`, `asked_for_why`, `assumption` and
   `intent` are all set in the one place a proposal succeeds. Reasons say "Quiet for N days", not "Untouched".
+- **D-23 (1 Nov)** Settle at capture. Captures from the page are no longer proposed on the spot: the owner sees a
+  preview with one *what does done look like?* question per quest (Muse Spark; a plain fallback if it fails; none
+  when the why is already specific), answers in a line, and proposes from the page. The answer is the quest's
+  `why`. One round, not a chat: a blank answer is allowed and the coach may ask later (D-10). Visitors still only
+  preview. `irysquest capture` on the CLI stays direct. This is the mental-contrasting research applied at the one
+  moment a goal is born, and it's what a person gets for free when they create quests through Claude or ChatGPT
+  over MCP; the built-in agent now does it too. Last code change before the freeze.

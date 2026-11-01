@@ -37,6 +37,8 @@ CAPTURE_SYSTEM = """You turn a person's raw brain dump into separate quests for 
 
 Reply with JSON only: {"quests": [{"title": "<under 80 chars>", "why": "<optional>", "next_step": "<2-10 minute action>"}]}"""
 
+SETTLE_SYSTEM = """You help someone settle what each new quest is for, before it is saved. For each quest, write ONE short question (under 20 words) that makes them picture the finished state: what done looks like, by when, or for whom. Mental contrasting: a goal with a vivid end state is far likelier to start. If the quest already carries a clear, specific why, return an empty string for it. Never ask two things at once. Warm, plain, no guilt. Reply with JSON only: {"questions": ["...", "", "..."]} in the same order as the quests."""
+
 
 @dataclass
 class Breakdown:
@@ -151,6 +153,14 @@ class Muse:
         ])
         return parse_capture(text)
 
+    def settle(self, quests: list[CapturedQuest], profile: str) -> list[str]:
+        """One question per captured quest, asking what done looks like. Empty string = no question needed."""
+        text = self.chat([
+            {"role": "system", "content": SETTLE_SYSTEM},
+            {"role": "user", "content": json.dumps({"quests": [q.__dict__ for q in quests], "about_the_user": profile}, ensure_ascii=False)},
+        ], temperature=0.3)
+        return parse_settle(text, len(quests))
+
     def capture_image(self, image: bytes, mime: str, profile: str) -> list[CapturedQuest]:
         data_url = f"data:{mime};base64," + base64.b64encode(image).decode()
         text = self.chat([
@@ -190,6 +200,13 @@ def parse_breakdown(text: str) -> Breakdown:
         assumption=str(j.get("assumption", "")).strip()[:200],
         needs_why=bool(j.get("needs_why", False)),
     )
+
+
+def parse_settle(text: str, n: int) -> list[str]:
+    j = _json_block(text)
+    qs = j.get("questions", []) or []
+    out = [str(q or "").strip()[:200] for q in qs[:n]]
+    return out + [""] * (n - len(out))
 
 
 def parse_capture(text: str) -> list[CapturedQuest]:

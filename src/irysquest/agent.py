@@ -229,6 +229,24 @@ class Agent:
 
     # ---- capture: brain dump → proposed quests ------------------------------------------
 
+    def settle_questions(self, quests: list[CapturedQuest]) -> list[str]:
+        """What-does-done-look-like, one question per quest; the user's answer becomes the quest's why.
+        A quest that already has a specific why gets no question. Falls back to a plain question if Muse fails."""
+        if not quests:
+            return []
+        try:
+            qs = self.muse.settle(quests, self.ctx.profile)
+        except MuseError as e:
+            self._say(f"  Couldn't draft questions ({e}); asking plainly.", "warn")
+            qs = [""] * len(quests)
+        out = []
+        for q, question in zip(quests, qs):
+            if len(q.why.strip()) >= 20:
+                out.append("")
+            else:
+                out.append(question or f'What does done look like for "{q.title}"?')
+        return out
+
     def capture(self, quests: list[CapturedQuest], *, source: str, preview: bool = False) -> list[dict]:
         """Proposes each captured quest into the inbox. With preview=True, proposes nothing (try-it mode)."""
         out = []

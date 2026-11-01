@@ -32,6 +32,9 @@ class ScriptedMuse:
     def capture_text(self, dump, profile):
         return [CapturedQuest(title=t.strip(), next_step="Open it") for t in dump.split(",") if t.strip()]
 
+    def settle(self, quests, profile):
+        return [f"What does done look like for {q.title}?" for q in quests]
+
 
 @pytest.fixture
 def world(tmp_path):
@@ -162,9 +165,15 @@ def test_try_it_visitor_words_stay_out_of_the_log(world):
         assert [q["outcome"] for q in r["quests"]] == ["preview"] and fake_server.PROPOSALS == []
         assert not any("grandma" in l["text"] for l in ag.ctx.log + ctx_store.load(cf).log)
         assert httpx.post(f"{base}/dig?try=tok").status_code == 403
-        # the owner's own capture is still logged, and proposed
-        httpx.post(f"{base}/text", json={"text": "fix the bike"})
-        assert any("fix the bike" in l["text"] for l in ctx_store.load(cf).log) and len(fake_server.PROPOSALS) == 1
+        # the owner's own capture is logged, previewed with a settle question, and proposed only from /propose
+        j = httpx.post(f"{base}/text", json={"text": "fix the bike"}).json()
+        assert j["settle"] is True and j["quests"][0]["question"] == "What does done look like for fix the bike?"
+        assert fake_server.PROPOSALS == []
+        j = httpx.post(f"{base}/propose", json={"source": "notes", "quests": [{"title": "fix the bike", "why": "Ride to work by December", "next_step": "Open it"}]}).json()
+        assert j["quests"][0]["outcome"] == "proposed" and len(fake_server.PROPOSALS) == 1
+        assert fake_server.PROPOSALS[-1]["payload"]["why"] == "Ride to work by December"
+        assert any("fix the bike" in l["text"] for l in ctx_store.load(cf).log)
+        assert httpx.post(f"{base}/propose?try=tok", json={"quests": [{"title": "x"}]}).status_code == 403
     finally:
         srv.shutdown()
 
@@ -213,3 +222,16 @@ def test_dry_run_leaves_no_trace_in_memory(world):
     muse = ScriptedMuse([{"role": "assistant", "content": None, "tool_calls": [call("ask_why", reason="still unclear")]}])
     res = Agent(client, muse, cf, stall_days=3).dig()
     assert res[0].outcome == "proposed" and ctx_store.load(cf).quests["q1"].asked_for_why is True
+
+
+def test_settle_questions_skip_a_clear_why_and_fall_back_without_muse(world):
+    from irysquest.muse import MuseError
+
+    class NoMuse:
+        def settle(self, quests, profile):
+            raise MuseError("down")
+
+    client, cf = world
+    ag = Agent(client, NoMuse(), cf, stall_days=3)
+    qs = ag.settle_questions([CapturedQuest(title="Learn to sing", why="Sing at the family get-together in December"), CapturedQuest(title="Fix the bike")])
+    assert qs == ["", 'What does done look like for "Fix the bike"?']
