@@ -441,3 +441,81 @@ Hand-off for the owner:
 
 Left on the server: 8 pending inbox proposals (the 3 from 1 Nov, the 2 from this afternoon, the 3 above). Serve
 still running in the "IrysQuest serve" window.
+
+## 2 Nov (night): demo-day prep — STALL_DAYS=0, Valorant unblocked, dry run reaches every quest
+
+Run on Mon 2 Nov, 19:48–19:55, against `main` at `c9ec89e` (duplicate check matches the proposal's title). No
+source changes; NextQuest untouched. `.env` and `.irysquest\context.json` edited as authorised (one value each).
+Tally: **9 PASS, 1 FAIL** (step 7: Kurzgesagt quest doesn't reach the coach).
+
+- 1 · PASS — Stopped serve (window pid 39076 and its tree, python 35924, via `taskkill /T`). 8787 free.
+- 2 · PASS — `git pull`: `20bceb3..c9ec89e`. `pip install -e ".[dev]"` OK. `pytest -q` → **32 passed**.
+- 3 · PASS — `.env`: the one `STALL_DAYS=` line replaced byte-for-byte (rest untouched); now **`STALL_DAYS=0`**.
+- 4 · PASS — `.irysquest\context.json`: text-level flip of the one field (indentation and escaping kept), checked by
+  re-parsing and comparing with the original plus that single change. "Check out YouTube videos on Valorant" →
+  `asked_for_why = False`.
+- 5 · PASS — Serve started in the "IrysQuest serve" window (`-EncodedCommand`, tee to `.irysquest\serve.log`),
+  after the `.env` edit so it runs with STALL_DAYS=0. Startup: "[19:50:47] Next scheduled dig at Tue 08:00." Left
+  running.
+- 6 · PASS — `irysquest today`: **4/5 slots**. Tracked: "Kurzgesagt-technique learning animations" (step "Write one
+  line in this quest's Why: what does done look like?", no why), "Check out YouTube videos on Valorant" (no why),
+  "Learn to sing: one song by December", "Finish the pilot script for Scriptory". `pending_proposals: 0`;
+  `list_proposals("pending")` → **0**.
+- 7 · **FAIL** (one quest) — `irysquest dig --dry-run`, no `--days` flag:
+
+  ```
+  [19:51:02] Reading your tracked quests.
+  [19:51:03] 4/5 slots used; 4 stalled for 0+ days.
+  [19:51:03] "Kurzgesagt-technique learning animations": still waiting for its why (the step asks what done looks like). Leaving it alone.
+  [19:51:03] "Check out YouTube videos on Valorant" untouched 1 days (step: Pick up phone and search Valorant on YouTube). Handing it to the coach.
+  [19:51:16]   Looked at: get_quest, get_history, list_decisions.
+  [19:51:16]   Purpose unclear and no why set: asking instead of guessing.
+  [19:51:16]   → question: "Write one line in this quest's Why: what does done look like?" (2 min). Monday is a good moment for a clean start, and a quick note on what you want from these videos will make it easy to pick the right one to enjoy.
+  [19:51:16] "Learn to sing: one song by December" untouched 1 days (step: Pick the song and play it once). Handing it to the coach.
+  [19:51:26]   Assuming: to sing confidently for family in December
+  [19:51:26]   → step: "Stand up and sing along to the chorus of your favourite song choice for 5 minutes (at 5:05pm after build block, standing in bedroom)" (5 min). Fresh Monday start — just a few easy minutes using your voice keeps it light and fun for that December sing-along.
+  [19:51:26] "Finish the pilot script for Scriptory" untouched 1 days (step: Open the draft and reread the last scene). Handing it to the coach.
+  [19:51:38]   Assuming: to have a finished pilot you can send to people
+  [19:51:38]   → step: "Read the printed last scene aloud with pen in hand and underline one line to keep (at 9:30, at the desk as you start the morning block)" (5 min). Monday gives you a clean page to start from. Hearing it aloud for a few minutes makes it easier to pick up the thread.
+  [19:51:38] Dry run: nothing was proposed.
+  ```
+
+  | Quest | Move | Step (cue) | Reason |
+  |---|---|---|---|
+  | Kurzgesagt-technique learning animations | not handed to the coach (`leave_alone` by the agent) | — | — |
+  | Check out YouTube videos on Valorant | `ask_why` | "Write one line in this quest's Why: what does done look like?" (2 min) | "Monday is a good moment for a clean start, and a quick note on what you want from these videos will make it easy to pick the right one to enjoy." |
+  | Learn to sing: one song by December | `shrink_step` | "Stand up and sing along to the chorus of your favourite song choice for 5 minutes" (cue "at 5:05pm after build block, standing in bedroom"), 5 min | "Fresh Monday start — just a few easy minutes using your voice keeps it light and fun for that December sing-along." |
+  | Finish the pilot script for Scriptory | `shrink_step` | "Read the printed last scene aloud with pen in hand and underline one line to keep" (cue "at 9:30, at the desk as you start the morning block"), 5 min | "Monday gives you a clean page to start from. Hearing it aloud for a few minutes makes it easier to pick up the thread." |
+
+  - PASS: Valorant now reaches the coach (with STALL_DAYS=0 from `.env`) and gets a move. All three handed-over
+    quests were looked at with all three read tools. Banned-word grep (overdue, failed, missed, lazy, behind,
+    again, streak) over the whole output: **no hits**. "Dry run: nothing was proposed."; pending still 0;
+    `context.json` unchanged by the dry run (Valorant `asked_for_why` still False).
+  - FAIL: "Kurzgesagt-technique learning animations" is not handed to the coach. Repro: a tracked quest whose
+    current step is exactly `WHY_STEP` ("Write one line in this quest's Why: what does done look like?") and whose
+    why is empty → `agent.py:94-99` says "still waiting for its why … Leaving it alone." before the coach is
+    called. This is the designed guard (don't replace our own unanswered question), not a regression, and it is
+    independent of `asked_for_why` (Kurzgesagt's is True; flipping it would change nothing). For the 08:00 run to
+    hand it over, its Why has to be written in the app first (or its step changed).
+  - FINDING: Valorant's `ask_why` will, in the real 08:00 run, propose that same `WHY_STEP` and set
+    `asked_for_why` back to True. That's expected behaviour; after it, Valorant is in the Kurzgesagt state.
+- 8 · PASS — Duplicate check on the real server: `POST /propose` with "Finish the pilot script for Scriptory"
+  (why "test", step "x") → `"outcome": "already there"`. Console: "    Already in the quest log or waiting in
+  Proposals; skipping." then "0 proposal(s) waiting in the app." Pending still **0**. No residue.
+- 9 · PASS — `POST /text` `{"text":"learn the ukulele"}` → `settle: true`, question "**What first song would feel
+  great to play all the way through?**". `POST /propose` (why "Play one song at the December get-together", step
+  "Watch one 5-minute tutorial") → `"proposed"`, **`01a19ca3-f7de-7ea8-bea0-d6f62bcd9a00`**. Reason read back
+  from `list_proposals`: "**Done looks like: Play one song at the December get-together. Captured from your notes.
+  It goes to the inbox; track it when a slot is free.**" Starts right; doesn't contain the question text. Pending
+  1 (the one deliberate residue).
+- 10 · PASS — `.irysquest\serve.log` (17 lines): no traceback, no warn-kind lines ("Muse couldn't help…",
+  "Couldn't check for duplicates…", "Coach returned an empty step…"). The only pattern hit was the startup line
+  "Self-signed certificate: the phone warns once…". The dry run ran from the CLI (not through serve); its output
+  above has no warn lines either.
+
+Hand-off for the owner:
+- [ ] Reject `01a19ca3-f7de-7ea8-bea0-d6f62bcd9a00` "learn the ukulele" on the phone.
+- [ ] Before 08:00, if Kurzgesagt should be in the recording: write its Why in the app.
+- [ ] After recording: set STALL_DAYS back to 3 and restart serve.
+
+Left on the server: 1 pending inbox proposal (the ukulele). Serve still running in the "IrysQuest serve" window.
