@@ -376,7 +376,7 @@ Left on the server: 5 pending inbox proposals (the 3 from 1 Nov, the 2 above). S
 
 Run on Mon 2 Nov, 18:25–18:35, against `main` at `2a3d664` (`91d0b4c` page design pass, `2a3d664` duplicate
 check). No source changes; NextQuest untouched.
-Tally: **10 PASS, 1 FAIL** (step 8, duplicate check), plus findings. Steps 10–11 are static only; the browser part
+Tally: **9 PASS, 1 FAIL** (step 8, duplicate check), **1 FINDING** (step 4). Steps 10–11 are static only; the browser part
 is a hand-off.
 
 - 1 · PASS — The previous serve had already exited: nothing listening on 8787, no python process, no Edge window
