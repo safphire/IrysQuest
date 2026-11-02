@@ -51,7 +51,10 @@ def _call(name: str, a: dict) -> tuple[dict | str, bool]:
         qid = a.get("quest_id") or a.get("parent_id")
         title = next((q["title"] for q in QUESTS if q["id"] == qid), a.get("title"))
         p = {"id": f"p{len(PROPOSALS) + 1}", "op": name.removeprefix("propose_"), "payload": a, "status": "pending",
-             "quest": title, "after": a.get("text") or a.get("title", ""), "reason": a.get("reason")}
+             "quest": title,
+             # as the real server shapes it: an add_quest's `after` is "title — next: step"
+             "after": (f"{a['title']} — next: {a['next_step']}" if name == "propose_add_quest" and a.get("next_step") else a.get("text") or a.get("title", "")),
+             "reason": a.get("reason")}
         PROPOSALS.append(p)
         return p, False
     return f"unknown tool {name}", True

@@ -267,7 +267,8 @@ class Agent:
             lp = self.client.list_proposals("pending")
             for p in (lp.get("proposals", []) if isinstance(lp, dict) else lp) or []:
                 if (p.get("op") or "").removeprefix("propose_") == "add_quest":
-                    known.add(_norm(p.get("after") or p.get("quest") or ""))
+                    # The server's `quest` is the bare title; `after` is "title — next: step". Title first.
+                    known.add(_norm(p.get("quest") or (p.get("after") or "").split(" — next:")[0]))
         except ToolError as e:
             self._say(f"  Couldn't check for duplicates ({e}); proposing anyway.", "warn")
         known.discard("")

@@ -240,7 +240,8 @@ def test_settle_questions_skip_a_clear_why_and_fall_back_without_muse(world):
 def test_capture_skips_what_is_already_there(world):
     client, cf = world
     ag = Agent(client, ScriptedMuse([]), cf, stall_days=3)
-    rows = ag.capture([CapturedQuest(title="learn to sing!"), CapturedQuest(title="Fix the bike")], source="notes")
+    rows = ag.capture([CapturedQuest(title="learn to sing!"), CapturedQuest(title="Fix the bike", next_step="Pump the tyres")], source="notes")
+    assert " — next: " in fake_server.PROPOSALS[-1]["after"]   # the real server's shape; the check must not trip on it
     assert [r["outcome"] for r in rows] == ["already there", "proposed"] and len(fake_server.PROPOSALS) == 1
     # and a second capture of the same new quest is caught by the pending proposal
     rows = ag.capture([CapturedQuest(title="the fix the bike")], source="voice note")
