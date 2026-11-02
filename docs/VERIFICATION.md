@@ -371,3 +371,73 @@ Tally: **6 PASS, 0 FAIL, 1 UNVERIFIED** (step 6), plus findings. Step 7 is a han
 
 Left on the server: 5 pending inbox proposals (the 3 from 1 Nov, the 2 above). Serve still running in the
 "IrysQuest serve" window; an Edge window with the certificate warning may still be open.
+
+## 2 Nov (evening): design pass, duplicate check, why on the card
+
+Run on Mon 2 Nov, 18:25–18:35, against `main` at `2a3d664` (`91d0b4c` page design pass, `2a3d664` duplicate
+check). No source changes; NextQuest untouched.
+Tally: **10 PASS, 1 FAIL** (step 8, duplicate check), plus findings. Steps 10–11 are static only; the browser part
+is a hand-off.
+
+- 1 · PASS — The previous serve had already exited: nothing listening on 8787, no python process, no Edge window
+  (only windowless background Edge processes, left alone).
+- 2 · PASS — `git pull`: `cecdbae..2a3d664` fast-forward. Tag created from the PC:
+  `git tag -a v0.1.0-freeze 7768b04 -m "Code freeze for the hackathon submission"`, `git push origin
+  v0.1.0-freeze` → "[new tag] v0.1.0-freeze -> v0.1.0-freeze". `git ls-remote --tags origin`:
+  `5a35008… refs/tags/v0.1.0-freeze`, `7768b04a… refs/tags/v0.1.0-freeze^{}`.
+- 3 · PASS — `pip install -e ".[dev]"` OK (the harmless "Ignoring invalid distribution ~rysquest" warning again).
+  `pytest -q` → **32 passed**.
+- 4 · FINDING — `.env` has **`STALL_DAYS=3`**, not 0; not edited. `.irysquest\context.json`: "Check out YouTube
+  videos on Valorant" → `asked_for_why = True` (still set).
+- 5 · PASS — Serve started in the "IrysQuest serve" window (`-EncodedCommand`, tee to `.irysquest\serve.log`).
+  Startup: "[18:29:01] Next scheduled dig at Tue 08:00." Left running.
+- 6 · PASS — Pending before: **5**.
+- 7 · PASS — `POST /text` `{"text":"fix the bike, call appa this weekend"}` → 200, `"settle": true`,
+  `"source": "notes"`, both `"preview"`:
+  - "fix the bike" (step "Walk to bike and note what's wrong in 5 min"): "**What will your bike ride feel like once
+    it's fixed?**"
+  - "call appa this weekend" (step "Pull up Appa's contact to call"): "**How do you hope Appa feels after hearing
+    you?**"
+- 8 · **FAIL** (duplicate check) / PASS (why on the card) — `POST /propose` with the bike (why "Ride it to work by
+  1 Dec") and appa (empty why) → **both `"proposed"`** (`01a19c58-7c34-7b29-90d6-178406b08d98` "fix the bike",
+  `01a19c58-7c6f-78bf-a426-77385052a2e8` "call appa this weekend"). Expected "fix the bike" → "already there",
+  since `01a19bd7-28ba-71e5-8cec-72041c5d56b8` "fix the bike" was pending. Console: "Settled: 1 of 2 quests have a
+  why. Proposing.", "2 quest(s) found in the notes.", both bullets, "2 proposal(s) waiting in the app."; the line
+  "Already in the quest log or waiting in Proposals; skipping." never appeared. Pending **7** (expected 6).
+  - Repro: with an add-quest proposal pending on the real server, capture the same title again. The server's
+    `list_proposals` gives `"quest": "fix the bike"` and `"after": "fix the bike — next: Check the bike for 5
+    minutes and note what's broken"`. `Agent._known_titles` (`agent.py`) adds `_norm(p.get("after") or
+    p.get("quest"))`, so it uses `after`: `_norm` of it is `'fix the bike next check the bike for 5 minutes and note
+    what s broken'`, which never equals `_norm("fix the bike")` = `'fix the bike'`. The test passes because
+    `tests/fake_server.py:54` sets `after` to the bare title; the real server appends " — next: <step>". Reading
+    `quest` first (or cutting `after` at " — next:") would match. The live-quest half of the check
+    (`list_quests`) wasn't exercised here.
+  - Why on the card, PASS. Read back via `list_proposals`: bike reason "Done looks like: Ride it to work by 1 Dec.
+    Captured from your notes. …"; appa reason "Captured from your notes. It goes to the inbox; track it when a slot
+    is free." (nothing about why). Console shows "(done looks like: Ride it to work by 1 Dec)" on the bike bullet.
+  - Separate `POST /propose` "learn the ukulele" → `"proposed"` (`01a19c58-ce10-74c2-b6c9-eea07fd683e3`),
+    console "Settled: 1 of 1 quests have a why. Proposing." Reason read back: "**Done looks like: Play one song at
+    the December get-together. Captured from your notes. It goes to the inbox; track it when a slot is free.**"
+    Pending **8**.
+- 9 · PASS — Visitor `POST /text?try=<token>` → 200, keys `["quests"]` (no `settle`), both `"preview"`, no
+  `question` keys. Visitor `POST /propose?try=<token>` → **403** `{"error": "Visitors can only preview captures."}`.
+  Pending still 8.
+- 10 · PASS (static) — `GET /` → 200, 16899 bytes. Contains
+  `<div id="status" role="status" aria-live="polite"><span class="dot"></span><span id="statustext"></span></div>`,
+  `<label class="btn grow">📷 Take a photo<input id="camera" type="file" accept="image/*" capture="environment"
+  hidden></label>` and `<label class="btn grow">Gallery<input id="photo" type="file" accept="image/*" hidden>`.
+  `<section><h2>Result</h2>` comes before `<section><h2>The morning check, now</h2>`. "About you", "Your rules for
+  the coach" and "Agent console" are each in a `<summary>` inside a `<details>`.
+- 11 · PASS — Saved to `%TEMP%\irysquest-page.html`; the one `<script>` block extracted and `node --check`
+  (node v24.4.0) → exit 0.
+
+Hand-off for the owner:
+- [ ] On the phone: Take a photo → Read it; watch the status bar; answer a question; Propose these; accept in the
+  app; open the quest and confirm its Why.
+- [ ] Reject or accept the test inbox proposals: `01a19c58-7c6f-78bf-a426-77385052a2e8` "call appa this weekend",
+  `01a19c58-ce10-74c2-b6c9-eea07fd683e3` "learn the ukulele", `01a19c58-7c34-7b29-90d6-178406b08d98` "fix the bike"
+  (today's duplicate), and yesterday's `01a19bd7-28ba-71e5-8cec-72041c5d56b8` "fix the bike" and
+  `01a19bd7-28f2-7df7-8aa1-7334f42d2417` "read the lean startup from page 180".
+
+Left on the server: 8 pending inbox proposals (the 3 from 1 Nov, the 2 from this afternoon, the 3 above). Serve
+still running in the "IrysQuest serve" window.
