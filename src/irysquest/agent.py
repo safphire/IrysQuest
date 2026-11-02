@@ -253,11 +253,14 @@ class Agent:
         self._say(f"{len(quests)} quest(s) found in the {source}." + (" Preview only." if preview else ""))
         for q in quests:
             row = {"title": q.title, "why": q.why, "next_step": q.next_step, "outcome": "preview"}
-            self._say(f'  • {q.title}' + (f' → first step: {q.next_step}' if q.next_step else ""))
+            self._say(f'  • {q.title}' + (f' → first step: {q.next_step}' if q.next_step else "") + (f' (done looks like: {q.why})' if q.why else ""))
             if not preview:
                 try:
+                    reason = f"Captured from your {source}. It goes to the inbox; track it when a slot is free."
+                    if q.why:
+                        reason = f"Done looks like: {q.why}. " + reason   # the why is on the quest once accepted; say it on the card too
                     r = self.client.propose_add_quest(
-                        q.title, reason=f"Captured from your {source}. It goes to the inbox; track it when a slot is free.",
+                        q.title, reason=reason,
                         why=q.why or None, next_step=q.next_step or None, track=False,
                     )
                     row["outcome"], row["proposal_id"] = "proposed", r.get("proposal_id", "")

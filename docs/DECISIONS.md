@@ -73,3 +73,9 @@
   preview. `irysquest capture` on the CLI stays direct. This is the mental-contrasting research applied at the one
   moment a goal is born, and it's what a person gets for free when they create quests through Claude or ChatGPT
   over MCP; the built-in agent now does it too. Last code change before the freeze.
+- **D-24 (2 Nov)** The capture page got a design pass before recording, not a rewrite: one accent (lime) for the
+  primary action in each card, a sticky status bar that says what the agent is doing while every primary button
+  is locked, the Result card moved up under the three capture cards and scrolled into view when it fills, owner
+  settings and the console folded behind disclosures, and the camera as its own button beside the gallery. The
+  why typed at capture now also appears on the proposal card ("Done looks like: …"), because the app shows a
+  proposal's reason but applies its why only on accept. Logic unchanged; still inside the freeze's bug-fix rule.
