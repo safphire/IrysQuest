@@ -235,3 +235,13 @@ def test_settle_questions_skip_a_clear_why_and_fall_back_without_muse(world):
     ag = Agent(client, NoMuse(), cf, stall_days=3)
     qs = ag.settle_questions([CapturedQuest(title="Learn to sing", why="Sing at the family get-together in December"), CapturedQuest(title="Fix the bike")])
     assert qs == ["", 'What does done look like for "Fix the bike"?']
+
+
+def test_capture_skips_what_is_already_there(world):
+    client, cf = world
+    ag = Agent(client, ScriptedMuse([]), cf, stall_days=3)
+    rows = ag.capture([CapturedQuest(title="learn to sing!"), CapturedQuest(title="Fix the bike")], source="notes")
+    assert [r["outcome"] for r in rows] == ["already there", "proposed"] and len(fake_server.PROPOSALS) == 1
+    # and a second capture of the same new quest is caught by the pending proposal
+    rows = ag.capture([CapturedQuest(title="the fix the bike")], source="voice note")
+    assert rows[0]["outcome"] == "already there" and len(fake_server.PROPOSALS) == 1

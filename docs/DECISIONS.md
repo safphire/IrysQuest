@@ -79,3 +79,8 @@
   settings and the console folded behind disclosures, and the camera as its own button beside the gallery. The
   why typed at capture now also appears on the proposal card ("Done looks like: …"), because the app shows a
   proposal's reason but applies its why only on accept. Logic unchanged; still inside the freeze's bug-fix rule.
+- **D-25 (2 Nov)** Captures skip what is already there. The freeze bug pass proposed "read the lean startup from
+  page 180" while "Read the book 'Lean startup' from page 180" was pending. Before proposing, the agent reads live
+  quests and pending add-quest proposals and compares normalised titles (lower-case, punctuation out, leading
+  the/a/an/to dropped). Exact-after-normalisation only: a fuzzy match would skip things the user meant as new.
+  The row shows "already there". If the check itself fails, it proposes anyway and says so.

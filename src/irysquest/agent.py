@@ -8,6 +8,8 @@ console and the web page tell the same story.
 
 from __future__ import annotations
 
+import re
+
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +21,14 @@ from .coach import Coach
 from .reckoning import Verdict, reckon
 from .muse import CapturedQuest, Muse, MuseError
 from .stalls import find_stalls
+
+def _norm(title: str) -> str:
+    """Lower-case, punctuation and leading articles stripped: 'Read the book' == 'read the book.'"""
+    words = re.sub(r"[^\w\s]", " ", title.lower()).split()
+    while words and words[0] in ("the", "a", "an", "to"):
+        words.pop(0)
+    return " ".join(words)
+
 
 WHY_STEP = "Write one line in this quest's Why: what does done look like?"
 
@@ -247,13 +257,36 @@ class Agent:
                 out.append(question or f'What does done look like for "{q.title}"?')
         return out
 
+    def _known_titles(self) -> set[str]:
+        """Normalised titles of every live quest and every pending add-quest proposal, for the duplicate check."""
+        known: set[str] = set()
+        try:
+            lq = self.client.list_quests()
+            for q in (lq.get("quests", []) if isinstance(lq, dict) else lq) or []:
+                known.add(_norm(q.get("title", "")))
+            lp = self.client.list_proposals("pending")
+            for p in (lp.get("proposals", []) if isinstance(lp, dict) else lp) or []:
+                if (p.get("op") or "").removeprefix("propose_") == "add_quest":
+                    known.add(_norm(p.get("after") or p.get("quest") or ""))
+        except ToolError as e:
+            self._say(f"  Couldn't check for duplicates ({e}); proposing anyway.", "warn")
+        known.discard("")
+        return known
+
     def capture(self, quests: list[CapturedQuest], *, source: str, preview: bool = False) -> list[dict]:
-        """Proposes each captured quest into the inbox. With preview=True, proposes nothing (try-it mode)."""
+        """Proposes each captured quest into the inbox. With preview=True, proposes nothing (try-it mode).
+        A quest whose title matches a live quest or a pending add-quest proposal is skipped as "already there"."""
         out = []
         self._say(f"{len(quests)} quest(s) found in the {source}." + (" Preview only." if preview else ""))
+        known = self._known_titles() if not preview else set()
         for q in quests:
             row = {"title": q.title, "why": q.why, "next_step": q.next_step, "outcome": "preview"}
             self._say(f'  • {q.title}' + (f' → first step: {q.next_step}' if q.next_step else "") + (f' (done looks like: {q.why})' if q.why else ""))
+            if not preview and _norm(q.title) in known:
+                row["outcome"] = "already there"
+                self._say("    Already in the quest log or waiting in Proposals; skipping.")
+                out.append(row)
+                continue
             if not preview:
                 try:
                     reason = f"Captured from your {source}. It goes to the inbox; track it when a slot is free."
