@@ -316,3 +316,58 @@ Only the scheduled run was allowed to propose; it proposed nothing (see 7b). Tal
   `NativeCommandError` block ("irysquest : [17:45:52] … At line:1 char:122 … RemoteException") and non-ASCII is
   garbled ("ΓåÆ"). Cosmetic, and only in the tee'd file; the restart's `Tee-Object` also overwrites `serve.log`
   (the 17:49 log was copied aside first). Running serve without piping, or from `pwsh` 7, avoids both.
+
+## 1 Nov (night): freeze bug pass — settle at capture
+
+Run on Mon 2 Nov, 16:07–16:20, against `main` at `7768b04`. No source changes; NextQuest untouched.
+Tally: **6 PASS, 0 FAIL, 1 UNVERIFIED** (step 6), plus findings. Step 7 is a hand-off (ids below).
+
+- 1 · PASS with FINDINGs — No serve was running (nothing to stop). `git pull`: already up to date.
+  - FINDING: HEAD is **`7768b04`**, not `e2f4921`. `7768b04` ("Snap it offers Take a photo and Choose from
+    gallery…") came after the freeze and only touches the Snap it markup/JS and `tests/test_client.py`; the settle
+    flow is as in `e2f4921`, so this pass verifies `7768b04`.
+  - FINDING: **the tag `v0.1.0-freeze` doesn't exist**, locally or on `origin` (`git ls-remote --tags origin` is
+    empty); `git describe --tags` → "fatal: No names found, cannot describe anything." Not created in this run.
+  - `pip install -e ".[dev]"` OK (warns "Ignoring invalid distribution ~rysquest", a leftover folder from an
+    interrupted install; harmless). `pytest -q` → **31 passed**.
+  - Serve started in the "IrysQuest serve" window via `-EncodedCommand`, `cmd /c "… serve --https 2>&1" |
+    Tee-Object .irysquest\serve.log` (no `NativeCommandError` wrapping this way; the arrow is still garbled in the
+    file). Startup: "Next scheduled dig at **Tue** 08:00." FINDING, not a bug: it was Monday 16:07, past 08:00.
+    Left running.
+- 2 · PASS — Pending before: **3** (three inbox `add_quest` from 1 Nov photo captures).
+- 3 · PASS — `POST https://localhost:8787/text` (`curl --cacert .irysquest\tls\cert.pem`) → 200,
+  `"settle": true`, `"source": "notes"`, all outcomes `"preview"`:
+  - "Learn to sing": why "For the family get-together in December" (taken from the text), **no question**;
+  - "Fix the bike": "**What will your first smooth ride feel like?**";
+  - "Read The Lean Startup from page 180": "**What will finishing these pages help you decide?**"
+
+  Pending still 3. Console: "3 quest(s) captured; 2 question(s) to settle what done looks like." (preceded by
+  "3 quest(s) found in the notes. Preview only.").
+- 4 · PASS with FINDING — `POST /propose` with the bike (why "Ride it to work by 1 Dec") and the Lean Startup (empty
+  why) → both `"outcome": "proposed"` (`01a19bd7-28ba-71e5-8cec-72041c5d56b8`,
+  `01a19bd7-28f2-7df7-8aa1-7334f42d2417`). Console: "Settled: 1 of 2 quests have a why. Proposing." Pending
+  **5** = 3 + 2.
+  - FINDING: **why and track can't be read back.** The server's `list_proposals` (`ProposalDto`: id, op, status,
+    source, client, created_at, quest, before, after, reason) and the propose reply (id, "pending", message) carry
+    no payload. Agent side, `agent.py:259-261` passes `why=q.why or None, track=False`, and
+    `mcp_client.py:126-131` sends `track` always and `why` when non-empty. Check in the app's Proposals screen.
+  - FINDING: no duplicate check against the inbox. "read the lean startup from page 180" was proposed while
+    "Read the book 'Lean startup' from page 180" (`01a196b4-f9e8-7b19-8d6e-b231a0f0565f`, 1 Nov) was still pending.
+- 5 · PASS — Visitor `POST /text?try=<token>` (token read from the startup line, not printed) → 200, keys
+  `["quests"]` only (no `settle`), all three `"preview"`, no `question` keys. Visitor `POST /propose?try=<token>`
+  → **403** "Visitors can only preview captures." Pending still 5.
+- 6 · **UNVERIFIED** — The desktop app's built-in browser refuses the self-signed certificate
+  (`ERR_CERT_AUTHORITY_INVALID`) and offers no way to accept it. Edge opened with the URL via `Start-Process`, but
+  screen access to a browser is read-only (no clicks), so the warning couldn't be passed and nothing on the page
+  was driven; no screenshot. Static check of the served HTML only (no JS run): it contains "Turn into quests",
+  "Propose these", "Discard", "Preview only", "Weekly reckoning", "digging…", "looking at the whole board…" and a
+  `/propose` call; results are inserted with `insertAdjacentHTML('afterbegin', …)` and trimmed by
+  `while(r.children.length>5)r.lastChild.remove()`. Needs a person at a desktop browser.
+- 7 · HAND-OFF — Can't reach the app. Reject these two inbox proposals from step 4 on the phone:
+  `01a19bd7-28ba-71e5-8cec-72041c5d56b8` ("fix the bike") and `01a19bd7-28f2-7df7-8aa1-7334f42d2417`
+  ("read the lean startup from page 180").
+- 8 · PASS — `git status` clean before this entry; `.env` and `.irysquest/` ignored; `tests/fixtures/notes.jpg`
+  tracked.
+
+Left on the server: 5 pending inbox proposals (the 3 from 1 Nov, the 2 above). Serve still running in the
+"IrysQuest serve" window; an Edge window with the certificate warning may still be open.
