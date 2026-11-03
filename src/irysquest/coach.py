@@ -17,6 +17,7 @@ validates it, and to the app, where the user accepts, edits or rejects it.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 
 from .muse import Muse, MuseError, _json_block
@@ -64,6 +65,15 @@ DECISION_TOOLS = [
 DECISION_NAMES = {t["function"]["name"] for t in DECISION_TOOLS}
 
 
+def clean_assumption(text) -> str:
+    """The agent writes "I'm assuming this is <assumption>", so drop a lead-in the model already wrote:
+    "assuming this is for fun" → "for fun"."""
+    a = str(text or "").strip().rstrip(".")
+    a = re.sub(r"^(?:i'?m |i am )?(?:assuming|assumed|assumption:?)\s+(?:that\s+)?(?:this|it)\s+(?:is|'s)\s+", "", a, flags=re.I)
+    a = re.sub(r"^(?:this|it)\s+is\s+", "", a, flags=re.I)
+    return a[:200]
+
+
 @dataclass
 class Decision:
     move: str                 # shrink_step | add_subquest | park_quest | ask_why | leave_alone
@@ -103,7 +113,7 @@ class Coach:
                     args = {}
                 if name in DECISION_NAMES:
                     return Decision(move=name, args=args, reason=str(args.get("reason", "")).strip()[:600],
-                                    assumption=str(args.get("assumption", "")).strip()[:200], looked_at=looked, turns=turn)
+                                    assumption=clean_assumption(args.get("assumption", "")), looked_at=looked, turns=turn)
                 result = self.reads.get(name, lambda a: {"error": f"unknown tool {name}"})(args)
                 looked.append(name)
                 messages.append({"role": "tool", "tool_call_id": tc["id"], "content": json.dumps(result, ensure_ascii=False)[:6000]})
@@ -116,7 +126,7 @@ class Coach:
             step = str(j.get("step", "")).strip()
             if step:
                 return Decision("shrink_step", {"step": step, "minutes": int(j.get("minutes", 5) or 5), "reason": j.get("reason", ""), "assumption": j.get("assumption", "")},
-                                reason=str(j.get("reason", ""))[:600], assumption=str(j.get("assumption", ""))[:200], looked_at=looked, turns=turn)
+                                reason=str(j.get("reason", ""))[:600], assumption=clean_assumption(j.get("assumption", "")), looked_at=looked, turns=turn)
         except MuseError:
             pass
         return Decision("leave_alone", {}, reason=(text or "No decision.")[:600], looked_at=looked, turns=turn)

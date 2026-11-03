@@ -266,3 +266,11 @@ def test_a_finished_step_with_nothing_next_goes_to_the_coach_at_once(world):
         assert "You finished the last step" in p["payload"]["reason"] and "Quiet for" not in p["payload"]["reason"]
     finally:
         q2.clear(); q2.update(saved)
+
+
+def test_assumption_lead_in_is_not_doubled():
+    from irysquest.coach import clean_assumption
+    assert clean_assumption("assuming this is for fun downtime") == "for fun downtime"
+    assert clean_assumption("I'm assuming it's a hobby.") == "a hobby"
+    assert clean_assumption("This is to sing for family") == "to sing for family"
+    assert clean_assumption("to sing confidently for family in December") == "to sing confidently for family in December"
