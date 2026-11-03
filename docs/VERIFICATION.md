@@ -519,3 +519,37 @@ Hand-off for the owner:
 - [ ] After recording: set STALL_DAYS back to 3 and restart serve.
 
 Left on the server: 1 pending inbox proposal (the ukulele). Serve still running in the "IrysQuest serve" window.
+
+## 3 Nov: video runs
+
+Run on Tue 3 Nov, 19:25–19:38, against `main` at `09592bd` (includes `6e5953f`, momentum). Real NextQuest server
+(ngrok) and real Meta Model API, except step 6 (fake server). No source changes; NextQuest untouched. Console
+output for the video is in `G:\QuestTrack\IrysQuest-video\runs\` (UTF-8). Tally: **7 PASS**, plus one owner
+step (4).
+
+- 1 · PASS — Serve wasn't running. `git pull`: `3c34216..09592bd`. `pip install -e ".[dev]"` OK. `pytest -q` →
+  **34 passed**.
+- 2 · PASS — `.env`: `STALL_DAYS=0`.
+- 3 · PASS — `irysquest dig` (real) → `real_dig_1.txt`. The first try printed "Server unreachable (404)…": the
+  ngrok tunnel was offline (ERR_NGROK_3200). Didn't log in; the owner started the server and tunnel, and the
+  re-run went through. 4/5 slots, all 4 handed to the coach, **4 proposals**: Valorant, sing, pilot script,
+  Kurzgesagt (it now has a why, so it reaches the coach). Pending list in `real_dig_1_proposals.txt`.
+  - FINDING: the Valorant reason reads "(I'm assuming this is assuming this is for fun downtime with
+    Valorant; …)". The coach's assumption already begins "assuming this is", and the reason template adds the
+    same words again. Fixed upstream while these runs were going (`6612aa8`, `89bf287`); not in this build.
+- 4 · OWNER — Rejected the pilot-script proposal in the app, accepted the other three. Pending 0 afterwards.
+- 5 · PASS — Second real `irysquest dig` → `real_dig_2.txt`. Pilot script got a different angle: "Grab paper and
+  hand-write for 5 minutes on what happens next in the pilot (after lunch, at the desk before opening the
+  laptop)" (it was "read the last scene aloud"). The three accepted steps were left alone ("Leaving it alone: …").
+  **1 proposal** pending, in `real_dig_2_proposals.txt`.
+- 6 · PASS — Momentum, real coach on the repo's fake server (`%TEMP%\momentum_demo.py` as specified, no
+  changes needed) → `momentum_demo.txt`. "2/5 slots used; 0 stalled for 3+ days; 1 finished a step and need the
+  next one." The sing quest went to the coach "for the next one" → "Sing the chorus once through softly with the
+  lyrics in front of you (tonight after dinner, in the living room)". Dry run: nothing proposed.
+- 7 · PASS — Banned-word grep (overdue, failed, missed, lazy, behind, again, streak), whole-word and substring,
+  over all five files in `runs\`: **no hits**.
+- 8 · PASS — `irysquest serve --https` started in the "IrysQuest serve" window (`-EncodedCommand`); `/health` →
+  `{"ok": true}`. Not teed to `.irysquest\serve.log` this time.
+
+Left on the server: 1 pending proposal (pilot script, from step 5). Serve running in the "IrysQuest serve" window.
+STALL_DAYS is still 0.
