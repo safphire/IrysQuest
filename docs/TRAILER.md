@@ -8,11 +8,11 @@ and a few tonal effects, no voiceover. The opening card states what existed befo
 | Beat | Source |
 |---|---|
 | The real run (0:34) | `irysquest dig` against the real NextQuest server and the Meta Model API, 3 Nov 19:25. Console shown unedited, all four quests |
-| The refusal (1:18) | The next real run, 3 Nov 19:35, after the pilot-script step was rejected in the app. The coach took a different angle and left three quests alone |
-| Momentum (1:06) | The real coach (Muse Spark) on a demo board, because only a notification Done in the app can leave a quest needing a next step. Labelled "Demo board · real coach" on screen |
-| Ask why (1:36) | A real dry run, 2 Nov 19:51 |
-| Capture (1:46) | IrysQuest's own capture page, running and driven frame by frame; the questions are the ones Muse Spark asked on 2 Nov |
-| Weekly reckoning (2:06) | A real run, 1 Nov |
+| The refusal (1:20) | The next real run, 3 Nov 19:35, after the pilot-script step was rejected in the app. The coach took a different angle and left three quests alone |
+| Momentum (1:08) | The real coach (Muse Spark) on a demo board, because only a notification Done in the app can leave a quest needing a next step. Labelled "Demo board · real coach" on screen |
+| Ask why (1:38) | A real dry run, 2 Nov 19:51 |
+| Capture (1:48) | IrysQuest's own capture page, running and driven frame by frame; the questions are the ones Muse Spark asked on 2 Nov |
+| Weekly reckoning (2:08) | A real run, 1 Nov |
 | Phone screens | NextQuest's Proposals screen, rebuilt from its Compose source (`ProposalsScreen.kt`, the theme tokens and the app's own fonts) and filled with the proposals from those runs; noted on screen |
 
 The run logs are recorded in [VERIFICATION.md](VERIFICATION.md) (3 Nov: video runs).
