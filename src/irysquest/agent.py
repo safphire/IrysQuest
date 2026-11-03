@@ -22,6 +22,10 @@ from .reckoning import Verdict, reckon
 from .muse import CapturedQuest, Muse, MuseError
 from .stalls import find_stalls
 
+def _days(n: int) -> str:
+    return "1 day" if n == 1 else f"{n} days"
+
+
 def _norm(title: str) -> str:
     """Lower-case, punctuation and leading articles stripped: 'Read the book' == 'read the book.'"""
     words = re.sub(r"[^\w\s]", " ", title.lower()).split()
@@ -102,7 +106,7 @@ class Agent:
             if s.needs_next_step:
                 self._say(f'"{s.title}": you finished its last step and nothing comes next yet. Handing it to the coach for the next one.')
             else:
-                self._say(f'"{s.title}" untouched {s.days} days (step: {s.current_step or "none"}). Handing it to the coach.')
+                self._say(f'"{s.title}" untouched {_days(s.days)} (step: {s.current_step or "none"}). Handing it to the coach.')
             rejected = sorted(set(s.rejected + notes.rejected))
             summary = {
                 "quest_id": s.quest_id, "title": s.title, "why": s.why or "", "current_step": s.current_step or "",
@@ -179,7 +183,7 @@ class Agent:
             if s.needs_next_step:
                 reason += " You finished the last step; this keeps the thread going" + (f", about {res.minutes} minutes." if res.minutes else ".")
             else:
-                reason += f" Quiet for {s.days} days" + (f"; about {res.minutes} minutes." if res.minutes else ".")
+                reason += f" Quiet for {_days(s.days)}" + (f"; about {res.minutes} minutes." if res.minutes else ".")
             reason = reason[:1000]
             try:
                 if d.move in ("shrink_step", "ask_why"):
