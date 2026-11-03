@@ -4,6 +4,8 @@
 
 Built during the [Meta Global AI Developer Hackathon](https://dev.meta.ai/events/global-hackathon), 26 Oct – 4 Nov 2026, indie track.
 
+**▶ [Watch the 3-minute demo](https://www.youtube.com/watch?v=Sg_Gt-SzO2E)**
+
 > **What existed before, what is new.** [NextQuest](https://github.com/safphire/NextQuest), a local-first Android
 > quest log with a self-hosted sync + MCP server, existed before the hackathon. Everything in *this* repository —
 > the agent, its stall detection, the Muse-powered breakdowns, voice and notebook-photo capture — was built during the

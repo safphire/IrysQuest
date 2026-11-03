@@ -1,5 +1,7 @@
 # The demo video
 
+[Watch it on YouTube](https://www.youtube.com/watch?v=Sg_Gt-SzO2E).
+
 Three minutes, built to be watched muted: every beat carries its own on-screen headline, and the sound is music
 and a few tonal effects, no voiceover. The opening card states what existed before the hackathon.
 
