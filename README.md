@@ -194,7 +194,8 @@ pip install -e ".[dev]" && pytest
 - [x] `irysquest serve`: morning schedule, Dig now, agent console
 - [x] Capture page: voice (Muse Voice Transcribe), notebook photo (Muse Spark vision), typed; settle-what-done-looks-like before proposing; try-it mode
 - [x] Open-weight mode: implemented against the Ollama/vLLM OpenAI-compatible API; verification on real Muse Glimmer is on standby (no local disk for the weights during the event)
-- [ ] Verified on a real phone end to end (in progress)
+- [x] Momentum: a quest left without a next step gets the next one
+- [x] Verified end to end on a real server, the real Meta Model API and a real phone (see docs/VERIFICATION.md)
 
 ## What's next
 
