@@ -40,3 +40,16 @@ def test_parse_breakdown_rejects_garbage():
     except MuseError:
         return
     raise AssertionError("expected MuseError")
+
+
+def test_needs_next_step_counts_whatever_its_age():
+    from datetime import datetime
+    from irysquest.stalls import find_stalls
+    now = datetime(2026, 11, 3, 18, 0)
+    today = {"tracked": [
+        {"id": "a", "title": "Fresh", "touched_at": "2026-11-03T17:00:00", "next_step": None, "needs_next_step": True},
+        {"id": "b", "title": "Old", "touched_at": "2026-10-20T08:00:00", "next_step": {"text": "x"}},
+        {"id": "c", "title": "Fresh too", "touched_at": "2026-11-03T17:00:00", "next_step": {"text": "y"}},
+    ]}
+    st = find_stalls(today, [], 3, now)
+    assert [s.title for s in st] == ["Fresh", "Old"] and st[0].needs_next_step is True

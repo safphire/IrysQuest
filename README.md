@@ -47,6 +47,7 @@ before you ask, and is open source. That's the bet: a coach that learns you by w
 | Trigger | What the agent does | Meta model |
 |---|---|---|
 | Every morning (or `irysquest dig`) | Reads your tracked quests, finds the ones nothing has touched in days, and hands each to the **coach**: Muse Spark with tools. It looks at the quest, its history and your past decisions if it needs to, then chooses one move: shrink the step to 2–10 minutes, add a subquest, park the quest, ask what it's for, or leave it alone. The move becomes a proposal with its reason and the assumption behind it | Muse Spark, tool calling |
+| A step marked done from a notification, with nothing next | **Momentum**: the quest goes to the coach at the next dig, whatever its age, and gets the next small step on the same thread, so a quest is never left stuck midway | Muse Spark, tool calling |
 | Sundays (or `irysquest reckon`) | The **weekly reckoning**: the coach reads the whole board at once and gives one verdict. *Park* one quest that's crowding the others, naming what it makes room for; *focus* on one this week; or *fine*. An AI that sometimes tells you to do less | Muse Spark |
 | A voice brain dump (capture page) | Transcribes, splits the ramble into separate quests, asks what done looks like for each, proposes them with your answers as their Why | Muse Voice Transcribe + Muse Spark |
 | A photo of a notebook page or whiteboard | Reads it, turns it into proposed quests | Muse Spark (vision) |

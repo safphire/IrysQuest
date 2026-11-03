@@ -246,3 +246,23 @@ def test_capture_skips_what_is_already_there(world):
     # and a second capture of the same new quest is caught by the pending proposal
     rows = ag.capture([CapturedQuest(title="the fix the bike")], source="voice note")
     assert rows[0]["outcome"] == "already there" and len(fake_server.PROPOSALS) == 1
+
+
+def test_a_finished_step_with_nothing_next_goes_to_the_coach_at_once(world):
+    client, cf = world
+    q2 = fake_server.QUESTS[1]
+    saved = dict(q2)
+    q2["next_step"], q2["needs_next_step"] = None, True     # fresh (touched now), but stuck midway
+    try:
+        muse = ScriptedMuse([
+            {"role": "assistant", "content": None, "tool_calls": [call("shrink_step", step="Fix the next pronunciation case", minutes=5, cue="after lunch, at the desk", reason="Nice, that one's done.", assumption="shipping v2")]},
+            {"role": "assistant", "content": None, "tool_calls": [call("shrink_step", step="Hum one scale", minutes=3, reason="r", assumption="a")]},
+        ])
+        res = Agent(client, muse, cf, stall_days=3).dig()
+        assert res[0].title == "Ship Scriptory v2" and res[0].outcome == "proposed"   # momentum first
+        first = json.loads(muse.calls[0][1]["content"].split("\n", 1)[1].split("\n\n")[0])
+        assert first["just_finished_a_step"] is True
+        p = next(p for p in fake_server.PROPOSALS if p["quest"] == "Ship Scriptory v2")
+        assert "You finished the last step" in p["payload"]["reason"] and "Quiet for" not in p["payload"]["reason"]
+    finally:
+        q2.clear(); q2.update(saved)

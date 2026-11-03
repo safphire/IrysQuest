@@ -84,3 +84,9 @@
   quests and pending add-quest proposals and compares normalised titles (lower-case, punctuation out, leading
   the/a/an/to dropped). Exact-after-normalisation only: a fuzzy match would skip things the user meant as new.
   The row shows "already there". If the check itself fails, it proposes anyway and says so.
+- **D-26 (3 Nov)** Momentum: a quest the server flags `needs_next_step` goes to the coach at the next dig whatever
+  its age. In NextQuest only a Done from a notification or the widget can leave a quest without a next step
+  (principle 4); before this, the agent ignored it because the quest was "fresh". The coach is told
+  `just_finished_a_step` and proposes the next small step on the same thread, acknowledging the finished one;
+  the reason says "You finished the last step" instead of "Quiet for N days". Momentum quests are handled first.
+  The minimal form of series quests (D-20), which stay deferred.

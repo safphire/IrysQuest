@@ -5,6 +5,11 @@ A quest is stalled when nothing about it has changed for STALL_DAYS: the server
 stamps `touched_at` on every event that touches the quest, so that one field is
 the signal. Quests with a pending proposal are skipped (the user hasn't answered
 yet), and steps the user rejected are collected so Muse can try a different angle.
+
+A quest the server flags `needs_next_step` (its step was marked done from a
+notification or the widget, with no next step written) is included whatever its
+age: that's a quest stuck midway, and the moment right after a finished step is
+the cheapest one to keep going.
 """
 
 from __future__ import annotations
@@ -21,6 +26,7 @@ class Stall:
     current_step: str | None
     days: int
     rejected: list[str] = field(default_factory=list)
+    needs_next_step: bool = False
 
 
 def _parse(ts: str) -> datetime:
@@ -38,7 +44,8 @@ def find_stalls(today: dict, proposals: list[dict], stall_days: int, now: dateti
     stalls: list[Stall] = []
     for q in today.get("tracked", []):
         age = now - _parse(q["touched_at"])
-        if age < timedelta(days=stall_days):
+        momentum = bool(q.get("needs_next_step"))
+        if age < timedelta(days=stall_days) and not momentum:
             continue
         if q["id"] in pending_for or q["title"] in pending_for:
             continue
@@ -46,6 +53,7 @@ def find_stalls(today: dict, proposals: list[dict], stall_days: int, now: dateti
         stalls.append(Stall(
             quest_id=q["id"], title=q["title"], why=q.get("why"), current_step=step,
             days=age.days, rejected=rejected_for.get(q["id"], []) + rejected_for.get(q["title"], []),
+            needs_next_step=momentum,
         ))
-    stalls.sort(key=lambda s: -s.days)
+    stalls.sort(key=lambda s: (not s.needs_next_step, -s.days))   # momentum first, then the longest-buried
     return stalls

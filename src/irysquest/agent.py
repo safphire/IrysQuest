@@ -77,7 +77,9 @@ class Agent:
         ctx_store.reconcile(self.ctx, proposals)
 
         stalls = find_stalls(today, proposals, days)
-        self._say(f"{today['slots_used']}/{today['slot_cap']} slots used; {len(stalls)} stalled for {days}+ days.")
+        nn = sum(1 for s in stalls if s.needs_next_step)
+        self._say(f"{today['slots_used']}/{today['slot_cap']} slots used; {len(stalls) - nn} stalled for {days}+ days"
+                  + (f"; {nn} finished a step and need the next one." if nn else "."))
         results: list[DigResult] = []
         if not stalls:
             self._say("Nothing is buried. See you tomorrow.")
@@ -97,7 +99,10 @@ class Agent:
                 res.move, res.outcome = "leave_alone", "left-alone"
                 results.append(res)
                 continue
-            self._say(f'"{s.title}" untouched {s.days} days (step: {s.current_step or "none"}). Handing it to the coach.')
+            if s.needs_next_step:
+                self._say(f'"{s.title}": you finished its last step and nothing comes next yet. Handing it to the coach for the next one.')
+            else:
+                self._say(f'"{s.title}" untouched {s.days} days (step: {s.current_step or "none"}). Handing it to the coach.')
             rejected = sorted(set(s.rejected + notes.rejected))
             summary = {
                 "quest_id": s.quest_id, "title": s.title, "why": s.why or "", "current_step": s.current_step or "",
@@ -106,6 +111,7 @@ class Agent:
                 "slots": f"{today['slots_used']}/{today['slot_cap']}",
                 "days_since_user_did_anything": away_days,
                 "is_monday": datetime.now().weekday() == 0,
+                "just_finished_a_step": s.needs_next_step,
             }
             reads = {
                 "get_quest": lambda a, qid=s.quest_id: self._safe(lambda: self.client.get_quest(qid)),
@@ -170,7 +176,10 @@ class Agent:
             reason = res.reason
             if d.assumption and d.move not in ("ask_why",):
                 reason += f" (I'm assuming this is {d.assumption}; correct me in the Why if not.)"
-            reason += f" Quiet for {s.days} days" + (f"; about {res.minutes} minutes." if res.minutes else ".")
+            if s.needs_next_step:
+                reason += " You finished the last step; this keeps the thread going" + (f", about {res.minutes} minutes." if res.minutes else ".")
+            else:
+                reason += f" Quiet for {s.days} days" + (f"; about {res.minutes} minutes." if res.minutes else ".")
             reason = reason[:1000]
             try:
                 if d.move in ("shrink_step", "ask_why"):
