@@ -69,8 +69,8 @@ def clean_assumption(text) -> str:
     """The agent writes "I'm assuming this is <assumption>", so drop a lead-in the model already wrote:
     "assuming this is for fun" → "for fun"."""
     a = str(text or "").strip().rstrip(".")
-    a = re.sub(r"^(?:i'?m |i am )?(?:assuming|assumed|assumption:?)\s+(?:that\s+)?(?:this|it)\s+(?:is|'s)\s+", "", a, flags=re.I)
-    a = re.sub(r"^(?:this|it)\s+is\s+", "", a, flags=re.I)
+    a = re.sub(r"^(?:i'?m |i am )?(?:assuming|assumed|assumption:?)\s+(?:that\s+)?(?:this|it)(?:\s+is|'s|’s)\s+", "", a, flags=re.I)
+    a = re.sub(r"^(?:this|it)(?:\s+is|'s|’s)\s+", "", a, flags=re.I)
     return a[:200]
 
 
