@@ -13,4 +13,9 @@ from datetime import datetime
 
 def say(text: str) -> None:
     stamp = datetime.now().strftime("%H:%M:%S")
-    print(f"[{stamp}] {text}", file=sys.stderr, flush=True)
+    line = f"[{stamp}] {text}"
+    try:
+        print(line, file=sys.stderr, flush=True)
+    except UnicodeEncodeError:   # a legacy console code page (e.g. cp1252 when piped on Windows): degrade, don't crash
+        enc = getattr(sys.stderr, "encoding", None) or "ascii"
+        print(line.encode(enc, errors="replace").decode(enc, errors="replace"), file=sys.stderr, flush=True)
