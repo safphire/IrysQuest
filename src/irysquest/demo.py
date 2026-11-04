@@ -235,6 +235,8 @@ class ReplayMuse:
     """Same interface the agent uses; answers replayed from real Muse Spark runs."""
 
     label = "replayed from real Muse Spark runs (2–3 Nov 2026)"
+    replay = True
+    think = 0.0   # seconds to pause per answer, so the paced tour unfolds quest by quest
 
     def chat_tools(self, messages: list[dict], tools: list[dict], temperature: float = 0.3) -> dict:
         user = messages[1]["content"]
@@ -244,6 +246,7 @@ class ReplayMuse:
                      for i, n in enumerate(("get_quest", "get_history", "list_decisions"))]
             return {"role": "assistant", "content": None, "tool_calls": reads}
         move, args = self._decide(summary)
+        _pause(self.think)
         return {"role": "assistant", "content": None,
                 "tool_calls": [{"id": "d", "type": "function", "function": {"name": move, "arguments": json.dumps(args)}}]}
 
@@ -260,6 +263,7 @@ class ReplayMuse:
         return first or GENERIC
 
     def chat(self, messages: list[dict], temperature: float = 0.4) -> str:
+        _pause(self.think)
         return json.dumps(RECKONING)
 
     def capture_text(self, dump: str, profile: str) -> list[CapturedQuest]:
@@ -337,6 +341,8 @@ def _pause(seconds: float) -> None:
 def run(live: bool = False, pace: float = 0.8) -> dict:
     """The scripted tour. Returns a summary, so tests can check it."""
     board, srv, agent, label = _setup(live)
+    if getattr(agent.muse, "replay", False):
+        agent.muse.think = pace * 0.75
     _banner(label)
     try:
         say("1) The morning dig. Four tracked quests have gone quiet for 4–6 days.")

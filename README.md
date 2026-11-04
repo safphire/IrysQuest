@@ -4,7 +4,7 @@
 
 Built during the [Meta Global AI Developer Hackathon](https://dev.meta.ai/events/global-hackathon), 26 Oct – 4 Nov 2026, indie track.
 
-**▶ [Watch the 3-minute demo](https://www.youtube.com/watch?v=Sg_Gt-SzO2E)** · **[Try it with no accounts or keys](#try-it-in-two-minutes-no-accounts-no-keys-no-server)**: `pip install -e . && irysquest demo`
+**▶ [Watch the 3-minute demo](https://www.youtube.com/watch?v=Sg_Gt-SzO2E)** · **[Try it with no accounts or keys](#try-it-in-two-minutes-no-accounts-no-keys-no-server)**: `pip install -e .`, then `irysquest demo`
 
 > **What existed before, what is new.** [NextQuest](https://github.com/safphire/NextQuest), a local-first Android
 > quest log with a self-hosted sync + MCP server, existed before the hackathon. Everything in *this* repository —
@@ -84,13 +84,31 @@ not promised by the agent.
 
 Python 3.11+ is all it needs. Nothing to sign up for, and nothing leaves your machine.
 
+**macOS / Linux**
+
 ```bash
-git clone https://github.com/safphire/IrysQuest && cd IrysQuest
-python -m venv .venv && . .venv/bin/activate    # Windows: .venv\Scripts\activate
+git clone https://github.com/safphire/IrysQuest
+cd IrysQuest
+python3 -m venv .venv
+. .venv/bin/activate
 pip install -e .
-irysquest demo              # the guided tour in the console, about a minute
-irysquest demo --serve      # the capture page on the same sample board: http://localhost:8787
+irysquest demo              # the guided tour in the console, about 20 seconds (--fast skips the pauses)
+irysquest demo --serve      # the capture page on the same sample board: http://localhost:8787 (Ctrl-C stops it)
 ```
+
+**Windows** (PowerShell or cmd; one command per line, no activation needed)
+
+```powershell
+git clone https://github.com/safphire/IrysQuest
+cd IrysQuest
+python -m venv .venv
+.venv\Scripts\python -m pip install -e .
+.venv\Scripts\irysquest demo
+.venv\Scripts\irysquest demo --serve
+```
+
+Checked on Windows 11 (Python 3.12, PowerShell 5.1 and cmd on code pages 437 and 1252) and on Linux, from a fresh
+clone with no key or `.env`.
 
 **What's real and what's a stand-in in demo mode**, said on screen as well:
 
@@ -101,12 +119,17 @@ irysquest demo --serve      # the capture page on the same sample board: http://
   proposal, rejects another, and marks a step done from a notification.
 - **The coach's answers are replayed** from real Muse Spark runs on 2 and 3 Nov 2026, recorded in
   [docs/VERIFICATION.md](docs/VERIFICATION.md), through the same loop. Typed capture works; voice and photo
-  need the real models.
+  need the real models and say so.
 
-If you have your own Meta Model API key, `META_API_KEY=… irysquest demo --live` runs the real Muse Spark on the
-same sample board. That's optional; the demo doesn't need it.
+Optional, if you have your own Meta Model API key: set it and add `--live` to run the real Muse Spark on the same
+sample board. The demo doesn't need it.
 
-`pip install -e ".[dev]" && pytest` runs the 36 tests, also with no server, key or account.
+```bash
+META_API_KEY=your-key irysquest demo --live                                    # macOS / Linux
+$env:META_API_KEY="your-key"; .venv\Scripts\irysquest demo --live              # Windows PowerShell
+```
+
+Tests, also with no server, key or account: `pip install -e ".[dev]"`, then `pytest` (38 tests).
 
 ## Running it against a real NextQuest (the full setup)
 
@@ -118,7 +141,8 @@ IrysQuest**: the demo above runs the same agent.
 **1. The NextQuest server** (Docker; unchanged by this project)
 
 ```bash
-git clone https://github.com/safphire/NextQuest && cd NextQuest
+git clone https://github.com/safphire/NextQuest
+cd NextQuest
 cp .env.example .env       # set ADMIN_PASSWORD (12+ characters)
 docker compose up -d
 curl http://localhost:8080/health
@@ -134,8 +158,10 @@ device** and scan the QR code with the phone (or enter the code under **Settings
 **3. The agent**
 
 ```bash
-git clone https://github.com/safphire/IrysQuest && cd IrysQuest
-python -m venv .venv && . .venv/bin/activate    # Windows: .venv\Scripts\activate
+git clone https://github.com/safphire/IrysQuest
+cd IrysQuest
+python -m venv .venv
+. .venv/bin/activate        # Windows: run .venv\Scripts\irysquest directly instead
 pip install -e .
 cp .env.example .env       # QUEST_SERVER_URL = NextQuest's PUBLIC_URL; META_API_KEY = your key
 irysquest login            # a browser opens the server's consent page; approve with the admin password
@@ -161,7 +187,8 @@ irysquest serve --https            # capture page for the phone (voice, photo, t
 **5. Tests**, with no server, phone or key:
 
 ```bash
-pip install -e ".[dev]" && pytest
+pip install -e ".[dev]"
+pytest
 ```
 
 Open-weight mode on a local model: [docs/OPEN_WEIGHT.md](docs/OPEN_WEIGHT.md).
@@ -212,7 +239,8 @@ Running it locally with Ollama or vLLM: [docs/OPEN_WEIGHT.md](docs/OPEN_WEIGHT.m
 Tests run without a NextQuest server, against a small fake in `tests/`:
 
 ```bash
-pip install -e ".[dev]" && pytest
+pip install -e ".[dev]"
+pytest
 ```
 
 ## How this was built

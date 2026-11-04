@@ -14,8 +14,17 @@ from datetime import datetime
 def say(text: str) -> None:
     stamp = datetime.now().strftime("%H:%M:%S")
     line = f"[{stamp}] {text}"
+    enc = getattr(sys.stderr, "encoding", None) or "utf-8"
+    try:
+        line.encode(enc)
+    except (UnicodeEncodeError, LookupError):   # a legacy code page (cp1252/437 when piped on Windows): degrade, don't crash
+        line = line.translate(_ASCII).encode(enc, errors="replace").decode(enc, errors="replace")
     try:
         print(line, file=sys.stderr, flush=True)
-    except UnicodeEncodeError:   # a legacy console code page (e.g. cp1252 when piped on Windows): degrade, don't crash
-        enc = getattr(sys.stderr, "encoding", None) or "ascii"
-        print(line.encode(enc, errors="replace").decode(enc, errors="replace"), file=sys.stderr, flush=True)
+    except UnicodeEncodeError:
+        print(line.encode("ascii", errors="replace").decode("ascii"), file=sys.stderr, flush=True)
+
+
+# Readable stand-ins for the few non-ASCII characters the console uses, so piped output stays legible.
+_ASCII = str.maketrans({"─": "-", "→": "->", "—": "-", "–": "-", "•": "*", "…": "...", "‘": "'", "’": "'",
+                        "“": '"', "”": '"', "✓": "v", "▶": ">"})

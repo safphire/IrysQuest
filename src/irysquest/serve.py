@@ -224,7 +224,8 @@ def make_handler(state: _State):
                             audio = self._body()
                             if len(audio) < 1000:
                                 return self._json(400, {"error": "That recording is empty."})
-                            ag._say(f"Transcribing {len(audio) // 1024} KB of audio with Muse Voice Transcribe.")
+                            if not getattr(ag.muse, "replay", False):
+                                ag._say(f"Transcribing {len(audio) // 1024} KB of audio with Muse Voice Transcribe.")
                             transcript = ag.muse.transcribe(audio, "capture.wav")
                             ag._say(f'Heard: "{transcript[:160]}{"…" if len(transcript) > 160 else ""}"')
                             quests = ag.muse.capture_text(transcript, "" if visitor else ag.ctx.profile)
@@ -234,7 +235,8 @@ def make_handler(state: _State):
                             mime = self.headers.get("Content-Type", "image/jpeg").split(";")[0]
                             if len(image) < 1000:
                                 return self._json(400, {"error": "No photo received."})
-                            ag._say(f"Reading a {len(image) // 1024} KB photo with Muse Spark.")
+                            if not getattr(ag.muse, "replay", False):
+                                ag._say(f"Reading a {len(image) // 1024} KB photo with Muse Spark.")
                             quests = ag.muse.capture_image(image, mime, "" if visitor else ag.ctx.profile)
                             return self._json(200, self._settled(ag, quests, "photo", visitor))
                         if visitor:
@@ -349,7 +351,10 @@ def serve(agent: Agent, host: str, port: int, dig_at: str, try_token: str, tls_d
     ip, scheme = lan_ip(), "https" if tls_dir else "http"
     if tls_dir:
         use_tls(srv, *ensure_cert(tls_dir, ip))
-    say(f"Capture page at {scheme}://{host}:{port}/  (on your phone: {scheme}://{ip}:{port}/)")
+    if host in ("127.0.0.1", "localhost", "::1"):
+        say(f"Capture page at {scheme}://localhost:{port}/  (this machine only)")
+    else:
+        say(f"Capture page at {scheme}://{host}:{port}/  (on your phone: {scheme}://{ip}:{port}/)")
     if tls_dir:
         say("Self-signed certificate: the phone warns once; choose Advanced → Proceed.")
     if try_token:
