@@ -186,6 +186,15 @@ Tests run without a NextQuest server, against a small fake in `tests/`:
 pip install -e ".[dev]" && pytest
 ```
 
+## How this was built
+
+I'm a solo developer. I set the problem, the design and the rules the agent must follow, made every judgment call
+(they're dated in [docs/DECISIONS.md](docs/DECISIONS.md)), and tested it on my own server, phone and quest log.
+Claude (Anthropic) worked with me as a coding assistant: it wrote much of the code and the tests to my direction,
+and Claude Code sessions on my machine ran the verification passes. Commits it helped with carry a
+`Co-Authored-By: Claude` line. Every claim in this README is backed by a logged run in
+[docs/VERIFICATION.md](docs/VERIFICATION.md), including what broke and what's still unverified.
+
 ## Status
 
 - [x] Sign in to the server (OAuth 2.1, PKCE) and read quests
