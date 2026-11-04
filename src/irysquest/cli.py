@@ -11,6 +11,7 @@
     irysquest profile [text]   show or set what the agent knows about you
     irysquest rules [text]     show or set your standing rules for the coach
     irysquest serve [--https]  capture page + "dig now" + the morning schedule
+    irysquest demo [--serve]   the whole agent on sample data: no accounts, no keys, no server
 """
 
 from __future__ import annotations
@@ -142,7 +143,30 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--https", action="store_true", help="serve over HTTPS with a self-signed certificate (needed for the phone's microphone)")
     s.set_defaults(fn=cmd_serve)
 
+    s = sub.add_parser("demo", help="run the whole agent on sample data, with no accounts, keys or server")
+    s.add_argument("--serve", action="store_true", help="open the capture page on the sample board (http://localhost:8787)")
+    s.add_argument("--live", action="store_true", help="use the real Muse Spark (needs META_API_KEY) instead of the recorded replay")
+    s.add_argument("--fast", action="store_true", help="no pauses between steps")
+    s.add_argument("--port", type=int, default=8787)
+
     args = p.parse_args(argv)
+    if args.cmd == "demo":
+        from . import demo
+        if args.live:
+            try:
+                from dotenv import load_dotenv
+                load_dotenv(args.env or ".env")
+            except ImportError:
+                pass
+        try:
+            if args.serve:
+                demo.serve_demo(live=args.live, port=args.port)
+            else:
+                demo.run(live=args.live, pace=0 if args.fast else 0.8)
+            return 0
+        except KeyboardInterrupt:
+            say("Stopped.")
+            return 130
     settings = config.load(args.env)
     try:
         return args.fn(settings, args)

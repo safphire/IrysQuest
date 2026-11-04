@@ -4,7 +4,7 @@
 
 Built during the [Meta Global AI Developer Hackathon](https://dev.meta.ai/events/global-hackathon), 26 Oct – 4 Nov 2026, indie track.
 
-**▶ [Watch the 3-minute demo](https://www.youtube.com/watch?v=Sg_Gt-SzO2E)**
+**▶ [Watch the 3-minute demo](https://www.youtube.com/watch?v=Sg_Gt-SzO2E)** · **[Try it with no accounts or keys](#try-it-in-two-minutes-no-accounts-no-keys-no-server)**: `pip install -e . && irysquest demo`
 
 > **What existed before, what is new.** [NextQuest](https://github.com/safphire/NextQuest), a local-first Android
 > quest log with a self-hosted sync + MCP server, existed before the hackathon. Everything in *this* repository —
@@ -80,11 +80,40 @@ not promised by the agent.
       └──────────────────────┘              existing, unchanged         └────────────────┘
 ```
 
-## Running it yourself (judges)
+## Try it in two minutes: no accounts, no keys, no server
 
-IrysQuest is an agent for an app that already exists, so it needs three things: the
+Python 3.11+ is all it needs. Nothing to sign up for, and nothing leaves your machine.
+
+```bash
+git clone https://github.com/safphire/IrysQuest && cd IrysQuest
+python -m venv .venv && . .venv/bin/activate    # Windows: .venv\Scripts\activate
+pip install -e .
+irysquest demo              # the guided tour in the console, about a minute
+irysquest demo --serve      # the capture page on the same sample board: http://localhost:8787
+```
+
+**What's real and what's a stand-in in demo mode**, said on screen as well:
+
+- **The agent is the real code**: stall detection, the coach's tool-calling loop and its guardrails, memory,
+  momentum, the weekly reckoning, capture with *what does done look like?*, and the duplicate check.
+- **The quest log is sample data** in a built-in stand-in for the NextQuest server. It speaks the same MCP
+  protocol on `127.0.0.1` and keeps everything in memory. The demo plays your part in the app: it accepts one
+  proposal, rejects another, and marks a step done from a notification.
+- **The coach's answers are replayed** from real Muse Spark runs on 2 and 3 Nov 2026, recorded in
+  [docs/VERIFICATION.md](docs/VERIFICATION.md), through the same loop. Typed capture works; voice and photo
+  need the real models.
+
+If you have your own Meta Model API key, `META_API_KEY=… irysquest demo --live` runs the real Muse Spark on the
+same sample board. That's optional; the demo doesn't need it.
+
+`pip install -e ".[dev]" && pytest` runs the 36 tests, also with no server, key or account.
+
+## Running it against a real NextQuest (the full setup)
+
+This is how it runs day to day, and how the video was recorded. It needs three things you'd set up yourself: the
 [NextQuest](https://github.com/safphire/NextQuest) server, the NextQuest Android app paired to it (that's where
-proposals are accepted or rejected), and a Meta Model API key. The tests need none of them (last step).
+proposals are accepted or rejected), and a Meta Model API key. **You don't need any of this to evaluate
+IrysQuest**: the demo above runs the same agent.
 
 **1. The NextQuest server** (Docker; unchanged by this project)
 
@@ -155,7 +184,7 @@ Open-weight mode on a local model: [docs/OPEN_WEIGHT.md](docs/OPEN_WEIGHT.md).
 
 ## Everyday commands
 
-Prerequisites: Python 3.11+, a running NextQuest server (its `docker compose up`), and a Meta Model API key.
+For your own quest log (not needed for the demo): Python 3.11+, a running NextQuest server (its `docker compose up`), and a Meta Model API key.
 
 ```bash
 pip install -e .

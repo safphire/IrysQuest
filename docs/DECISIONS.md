@@ -90,3 +90,10 @@
   `just_finished_a_step` and proposes the next small step on the same thread, acknowledging the finished one;
   the reason says "You finished the last step" instead of "Quiet for N days". Momentum quests are handled first.
   The minimal form of series quests (D-20), which stay deferred.
+- **D-27 (4 Nov)** A no-login path for judges: `irysquest demo`. The organisers asked that judges run projects
+  from the README without signing up for or logging in to outside accounts, and the full setup needs a Meta key, a
+  NextQuest server and a paired phone. The demo runs the real agent against an in-memory NextQuest stand-in
+  (`src/irysquest/demo.py`, same MCP protocol, sample quests) with the coach's answers replayed from the real
+  2–3 Nov Muse Spark runs through the same tool loop. Both stand-ins are labelled on screen and in the README;
+  nothing is presented as live that isn't. `--live` swaps in the real model for anyone with their own key.
+  `--serve` puts the capture page on the sample board. No credentials appear in the README.
